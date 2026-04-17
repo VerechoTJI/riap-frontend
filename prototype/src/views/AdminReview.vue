@@ -13,9 +13,10 @@
 </template>
 
 <script>
-import listings from '/public/fixtures/listings.json'
+import { getListings } from '../lib/fixtures'
 export default {
-  data(){ return { all: [...listings] } },
+  data(){ return { all: [] } },
+  async created(){ try{ this.all = await getListings() }catch(e){ console.error(e) } },
   computed:{ pending(){ return this.all.filter(l=>l.status==='pending') } },
   methods:{
     publish(l){ l.status='published' },

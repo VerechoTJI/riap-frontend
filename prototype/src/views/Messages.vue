@@ -15,9 +15,12 @@
 </template>
 
 <script>
-import msgs from '/public/fixtures/messages.json'
+import { getMessages } from '../lib/fixtures'
 export default {
-  data(){ return { body:'', messages: [...msgs] } },
+  data(){ return { body:'', messages: [] } },
+  async created(){
+    try{ this.messages = await getMessages() }catch(e){ console.error(e) }
+  },
   methods:{
     send(){
       const user = JSON.parse(localStorage.getItem('riap_user')||'null') || {username:'匿名'}

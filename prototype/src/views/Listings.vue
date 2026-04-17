@@ -24,10 +24,13 @@
 </template>
 
 <script>
-import listings from '/public/fixtures/listings.json'
+import { getListings } from '../lib/fixtures'
 export default {
   data(){
-    return { q:'', city:'', page:1, per:5, all:listings }
+    return { q:'', city:'', page:1, per:5, all:[] }
+  },
+  async created(){
+    try{ this.all = await getListings() }catch(e){ console.error(e) }
   },
   computed:{
     cities(){

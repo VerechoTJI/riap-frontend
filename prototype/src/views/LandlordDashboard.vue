@@ -15,12 +15,12 @@
 </template>
 
 <script>
-import listings from '/public/fixtures/listings.json'
+import { getListings } from '../lib/fixtures'
 export default {
-  data(){ return { all: [...listings] } },
+  data(){ return { all: [] } },
+  async created(){ try{ this.all = await getListings() }catch(e){ console.error(e) } },
   computed:{
     myListings(){
-      // prototype: return all listings for simplicity
       return this.all
     }
   },

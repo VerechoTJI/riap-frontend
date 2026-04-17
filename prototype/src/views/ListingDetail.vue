@@ -10,12 +10,15 @@
 </template>
 
 <script>
-import listings from '/public/fixtures/listings.json'
+import { getListings } from '../lib/fixtures'
 export default {
   data(){ return { listing:null } },
-  created(){
-    const id = Number(this.$route.params.id)
-    this.listing = listings.find(l=>l.id===id) || {title:'找不到',description:'',rent:0,city:''}
+  async created(){
+    try{
+      const id = Number(this.$route.params.id)
+      const all = await getListings()
+      this.listing = all.find(l=>l.id===id) || {title:'找不到',description:'',rent:0,city:''}
+    }catch(e){ console.error(e); this.listing = {title:'錯誤',description:'',rent:0,city:''} }
   }
 }
 </script>
