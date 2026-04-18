@@ -81,6 +81,7 @@
 <script>
 import { getListings, getMessages, addMessage } from "../lib/fixtures";
 import { formatDate, formatTwd, listingImage, readCurrentUser } from "../lib/ui";
+import { buildThreads } from "../lib/message-utils";
 
 export default {
   data() {
@@ -118,6 +119,24 @@ export default {
         toName = landlordName;
       }
 
+      // Safety: if both sides resolve to the same display (e.g. "Bob Wang → Bob Wang"),
+      // try to infer the counterpart from recent messages.
+      if (fromName === toName) {
+        const msgs = this.messages.filter((m) => m.listingId === listing.id);
+        if (msgs.length > 0) {
+          const recent = msgs.slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+          if (recent) {
+            if (recent.from && recent.from !== landlordName) {
+              fromName = recent.from;
+            } else if (recent.to && recent.to !== landlordName) {
+              fromName = recent.to;
+            } else {
+              fromName = user.displayName || user.username || "我";
+            }
+          }
+        }
+      }
+
       return {
         title: listing.title || "租屋對話",
         from: fromName,
@@ -150,7 +169,7 @@ export default {
       const filteredMessages = this.user && this.user.role === "admin" ? messages.filter((m) => !m.sample) : messages;
       this.messages = filteredMessages;
       this.listings = listings;
-      this.threads = this.buildThreads(listings, this.messages);
+      this.threads = buildThreads(listings, this.messages);
       this.activeThreadId = Number(this.$route.query.listing) || this.threads[0]?.id || null;
 
       this.$nextTick(() => this.scrollToBottom());
@@ -260,7 +279,7 @@ export default {
           }
         } else {
           this.listings = await getListings();
-          this.threads = this.buildThreads(this.listings, this.messages);
+          this.threads = buildThreads(this.listings, this.messages);
         }
       } catch (e) {
         console.error(e);
@@ -275,25 +294,7 @@ export default {
       });
     },
 
-    buildThreads(listingsArg, messagesArg) {
-      const msgs = messagesArg || this.messages || [];
-      const lst = listingsArg || this.listings || [];
-      const all = lst.map((listing) => {
-        const m = msgs.filter((mm) => mm.listingId === listing.id);
-        const recent = m.slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))[0];
-        return {
-          id: listing.id,
-          listingId: listing.id,
-          title: listing.title,
-          city: listing.city,
-          image: listingImage(listing),
-          preview: recent?.body || `${listing.city} · NT$ ${formatTwd(listing.rent)}`,
-          recentAt: recent?.createdAt || listing.postedAt || null,
-        };
-      });
-      all.sort((a,b) => new Date(b.recentAt || 0) - new Date(a.recentAt || 0));
-      return all.slice(0,3);
-    },
+    
 
     scrollToBottom() {
       try {
