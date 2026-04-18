@@ -128,20 +128,11 @@ export default {
     if (!this.user) return;
     try {
       const [messages, listings] = await Promise.all([getMessages(), getListings()]);
-      this.messages = messages;
+      // hide sample messages from admins
+      const filteredMessages = this.user && this.user.role === "admin" ? messages.filter((m) => !m.sample) : messages;
+      this.messages = filteredMessages;
       this.listings = listings;
-      this.threads = listings.slice(0, 3).map((listing) => {
-        const msgs = messages.filter((m) => m.listingId === listing.id);
-        const recent = msgs.slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
-        return {
-          id: listing.id,
-          listingId: listing.id,
-          title: listing.title,
-          city: listing.city,
-          image: listingImage(listing),
-          preview: recent?.body || `${listing.city} · NT$ ${formatTwd(listing.rent)}`,
-        };
-      });
+      this.threads = this.buildThreads(listings, this.messages);
       this.activeThreadId = Number(this.$route.query.listing) || this.threads[0]?.id || null;
 
       this.$nextTick(() => this.scrollToBottom());
@@ -196,13 +187,36 @@ export default {
       try {
         if (event && event.detail) {
           const msg = event.detail;
+          // do not surface sample messages to admins
+          if (this.user && this.user.role === "admin" && msg.sample) return;
           if (!this.messages.find((m) => m.id === msg.id)) this.messages.push(msg);
-          const t = this.threads.find((th) => th.id === msg.listingId);
-          if (t) t.preview = msg.body;
+
+          // move or create the thread for this listing to the top
+          const idx = this.threads.findIndex((th) => th.id === msg.listingId);
+          if (idx >= 0) {
+            const existing = this.threads.splice(idx, 1)[0];
+            const updated = { ...existing, preview: msg.body, recentAt: msg.createdAt };
+            this.threads.unshift(updated);
+          } else {
+            const listing = this.listings.find((l) => l.id === msg.listingId) || {};
+            this.threads.unshift({
+              id: listing.id || msg.listingId,
+              listingId: listing.id || msg.listingId,
+              title: listing.title || "租屋對話",
+              city: listing.city || "",
+              image: listingImage(listing || {}),
+              preview: msg.body,
+              recentAt: msg.createdAt,
+            });
+          }
+
+          // keep only top 3 threads
+          if (this.threads.length > 3) this.threads.splice(3);
+
           this.$nextTick(() => this.scrollToBottom());
         } else {
           const messages = await getMessages();
-          this.messages = messages;
+          this.messages = this.user && this.user.role === "admin" ? messages.filter((m) => !m.sample) : messages;
           this.updateThreadPreviews();
           this.$nextTick(() => this.scrollToBottom());
         }
@@ -228,14 +242,7 @@ export default {
           }
         } else {
           this.listings = await getListings();
-          this.threads = this.listings.slice(0, 3).map((listing) => ({
-            id: listing.id,
-            listingId: listing.id,
-            title: listing.title,
-            city: listing.city,
-            image: listingImage(listing),
-            preview: this.messages.filter((m) => m.listingId === listing.id).slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))[0]?.body || `${listing.city} · NT$ ${formatTwd(listing.rent)}`,
-          }));
+          this.threads = this.buildThreads(this.listings, this.messages);
         }
       } catch (e) {
         console.error(e);
@@ -248,6 +255,26 @@ export default {
         const listing = this.listings.find((l) => l.id === thread.id) || {};
         thread.preview = recent?.body || `${thread.city || listing.city || ""} · NT$ ${formatTwd(listing.rent || 0)}`;
       });
+    },
+
+    buildThreads(listingsArg, messagesArg) {
+      const msgs = messagesArg || this.messages || [];
+      const lst = listingsArg || this.listings || [];
+      const all = lst.map((listing) => {
+        const m = msgs.filter((mm) => mm.listingId === listing.id);
+        const recent = m.slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))[0];
+        return {
+          id: listing.id,
+          listingId: listing.id,
+          title: listing.title,
+          city: listing.city,
+          image: listingImage(listing),
+          preview: recent?.body || `${listing.city} · NT$ ${formatTwd(listing.rent)}`,
+          recentAt: recent?.createdAt || listing.postedAt || null,
+        };
+      });
+      all.sort((a,b) => new Date(b.recentAt || 0) - new Date(a.recentAt || 0));
+      return all.slice(0,3);
     },
 
     scrollToBottom() {
