@@ -1,5 +1,23 @@
 [
-  { "id": 1, "username": "alice", "role": "tenant" },
-  { "id": 2, "username": "bob", "role": "landlord" },
-  { "id": 3, "username": "admin", "role": "admin" }
+  {
+    "id": 1,
+    "username": "alice",
+    "displayName": "Alice Chen",
+    "email": "alice@example.com",
+    "role": "tenant"
+  },
+  {
+    "id": 2,
+    "username": "bob",
+    "displayName": "Bob Wang",
+    "email": "bob@example.com",
+    "role": "landlord"
+  },
+  {
+    "id": 3,
+    "username": "admin",
+    "displayName": "系統管理員",
+    "email": "admin@example.com",
+    "role": "admin"
+  }
 ]
