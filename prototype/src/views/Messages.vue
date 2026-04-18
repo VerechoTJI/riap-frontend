@@ -79,7 +79,7 @@
 </template>
 
 <script>
-import { getListings, getMessages } from "../lib/fixtures";
+import { getListings, getMessages, addMessage } from "../lib/fixtures";
 import { formatDate, formatTwd, listingImage, readCurrentUser } from "../lib/ui";
 
 export default {
@@ -135,24 +135,102 @@ export default {
         preview: messages.find((message) => message.listingId === listing.id)?.body || `${listing.city} · NT$ ${formatTwd(listing.rent)}`,
       }));
       this.activeThreadId = Number(this.$route.query.listing) || this.threads[0]?.id || null;
+
+      // bind event handlers so we can remove them later
+      this._onMessagesChanged = (e) => this.onMessagesChanged(e);
+      this._onListingsChanged = (e) => this.onListingsChanged(e);
+      window.addEventListener("riap-messages-changed", this._onMessagesChanged);
+      window.addEventListener("riap-listings-changed", this._onListingsChanged);
     } catch (error) {
       console.error(error);
     }
   },
+
+  beforeUnmount() {
+    try {
+      window.removeEventListener("riap-messages-changed", this._onMessagesChanged);
+      window.removeEventListener("riap-listings-changed", this._onListingsChanged);
+    } catch (e) {
+      // ignore
+    }
+  },
   methods: {
     formatDate,
-    send() {
+    async send() {
       const user = readCurrentUser() || this.user || { username: "匿名", displayName: "匿名" };
       if (!this.body.trim()) return;
-      this.messages.push({
-        id: Date.now(),
+      if (!this.activeThreadId) return alert("請先選擇對話或房源");
+      const payload = {
         listingId: this.activeThreadId,
         from: user.displayName || user.username,
         to: this.currentThread.to,
         body: this.body.trim(),
         createdAt: new Date().toISOString(),
+      };
+      try {
+        await addMessage(payload);
+        // actual insertion and UI update will be handled by the "riap-messages-changed" event
+        this.body = "";
+      } catch (e) {
+        console.error(e);
+        alert("傳送失敗，請稍後再試");
+      }
+    },
+
+    async onMessagesChanged(event) {
+      try {
+        if (event && event.detail) {
+          const msg = event.detail;
+          if (!this.messages.find((m) => m.id === msg.id)) this.messages.unshift(msg);
+          const t = this.threads.find((th) => th.id === msg.listingId);
+          if (t) t.preview = msg.body;
+        } else {
+          const messages = await getMessages();
+          this.messages = messages;
+          this.updateThreadPreviews();
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    },
+
+    async onListingsChanged(event) {
+      try {
+        if (event && event.detail) {
+          const listing = event.detail;
+          if (!this.listings.find((l) => l.id === listing.id)) this.listings.unshift(listing);
+          if (!this.threads.find((t) => t.id === listing.id)) {
+            this.threads.unshift({
+              id: listing.id,
+              listingId: listing.id,
+              title: listing.title,
+              city: listing.city,
+              image: listingImage(listing),
+              preview: this.messages.find((m) => m.listingId === listing.id)?.body || `${listing.city} · NT$ ${formatTwd(listing.rent)}`,
+            });
+          }
+        } else {
+          this.listings = await getListings();
+          this.threads = this.listings.slice(0, 3).map((listing) => ({
+            id: listing.id,
+            listingId: listing.id,
+            title: listing.title,
+            city: listing.city,
+            image: listingImage(listing),
+            preview: this.messages.find((message) => message.listingId === listing.id)?.body || `${listing.city} · NT$ ${formatTwd(listing.rent)}`,
+          }));
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    },
+
+    updateThreadPreviews() {
+      this.threads.forEach((thread) => {
+        const recent = this.messages.find((m) => m.listingId === thread.id);
+        const listing = this.listings.find((l) => l.id === thread.id) || {};
+        thread.preview = recent?.body || `${thread.city || listing.city || ""} · NT$ ${formatTwd(listing.rent || 0)}`;
       });
-      this.body = "";
     },
   },
 };
