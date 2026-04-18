@@ -117,7 +117,10 @@ export default {
       return this.activeThread?.image || listingImage(this.listings[0] || { id: 1 });
     },
     threadMessages() {
-      return this.messages.filter((message) => message.listingId === this.activeThreadId);
+      return this.messages
+        .filter((message) => message.listingId === this.activeThreadId)
+        .slice()
+        .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
     },
   },
   async created() {
@@ -193,7 +196,7 @@ export default {
       try {
         if (event && event.detail) {
           const msg = event.detail;
-          if (!this.messages.find((m) => m.id === msg.id)) this.messages.unshift(msg);
+          if (!this.messages.find((m) => m.id === msg.id)) this.messages.push(msg);
           const t = this.threads.find((th) => th.id === msg.listingId);
           if (t) t.preview = msg.body;
           this.$nextTick(() => this.scrollToBottom());
