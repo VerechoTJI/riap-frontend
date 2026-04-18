@@ -15,7 +15,7 @@
         <span class="eyebrow">即時溝通</span>
         <h1>把詢問、回覆與房源脈絡整理成一條清晰的對話。</h1>
         <p>
-          訊息內容只儲存在前端記憶體，適合用於展示 tenant / landlord 的互動流程。
+          訊息內容儲存在記憶體，用於展示 tenant / landlord 的互動流程。
         </p>
       </div>
 
