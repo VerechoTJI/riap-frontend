@@ -99,11 +99,29 @@ export default {
     },
     currentThread() {
       const listing = this.listings.find((item) => item.id === this.activeThread?.listingId) || this.listings[0] || {};
-      const user = this.user || { displayName: null, username: null };
+      const user = this.user || { displayName: null, username: null, role: null };
+
+      const landlordName = listing.landlord || null;
+      let fromName = user.displayName || user.username || "我";
+      let toName = landlordName || "房東";
+
+      // If the current user is the landlord of this listing, show the other party on the left
+      if (
+        user.role === "landlord" &&
+        landlordName &&
+        (landlordName === (user.displayName || user.username))
+      ) {
+        const msgs = this.messages.filter((m) => m.listingId === listing.id);
+        const recent = msgs.slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+        const counterpart = recent ? (recent.from === landlordName ? recent.to : recent.from) : "房客";
+        fromName = counterpart;
+        toName = landlordName;
+      }
+
       return {
         title: listing.title || "租屋對話",
-        from: user.displayName || user.username || "我",
-        to: listing.landlord || "房東",
+        from: fromName,
+        to: toName,
         statusLabel: "目前詢問",
       };
     },
