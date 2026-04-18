@@ -85,28 +85,7 @@ export default {
     statusLabel,
     statusTone,
     create() {
-      const title = prompt("新房源標題", "近捷運高質感套房");
-      if (title === null) return;
-      const city = prompt("城市", "台北市") || "台北市";
-      const rent = Number(prompt("月租", "18000") || 18000);
-      const description = prompt("簡短描述", "採光好、生活機能佳") || "採光好、生活機能佳";
-      this.all.unshift({
-        id: Date.now(),
-        title,
-        description,
-        rent,
-        city,
-        address: `${city} 新增路 1 號`,
-        deposit: rent * 2,
-        managementFee: 1000,
-        size: 16,
-        layout: "1房1廳1衛",
-        floor: "8F / 12F",
-        availableFrom: "2026-05-01",
-        landlord: "新增房東",
-        status: "published",
-        features: ["可開伙", "近捷運"],
-      });
+      this.$router.push('/listing/new');
     },
     edit(listing) {
       const title = prompt("修改標題", listing.title);

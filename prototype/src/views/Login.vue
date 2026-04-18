@@ -38,16 +38,20 @@
           <input v-model="username" placeholder="例如 alice / bob@example.com" />
         </label>
         <label class="field">
+          <span>密碼</span>
+          <input type="password" v-model="password" placeholder="請輸入密碼" />
+        </label>
+        <label class="field">
           <span>角色</span>
           <select v-model="role">
-            <option value="tenant">承租者</option>
+            <option value="tenant">房客</option>
             <option value="landlord">房東</option>
             <option value="admin">管理員</option>
           </select>
         </label>
       </div>
 
-      <button class="primary-button" @click="login">模擬登入</button>
+      <button class="primary-button" @click="login">登入 / 註冊（需密碼）</button>
 
       <div class="demo-list">
         <div class="demo-list__title">示範帳號</div>
@@ -66,13 +70,14 @@
 </template>
 
 <script>
-import { getUsers } from "../lib/fixtures";
-import { roleLabel, writeCurrentUser } from "../lib/ui";
+import { getUsers, addUser } from "../lib/fixtures";
+import { roleLabel, writeCurrentUser, hashPassword } from "../lib/ui";
 
 export default {
   data() {
     return {
       username: "",
+      password: "",
       role: "tenant",
       demoUsers: [],
     };
@@ -89,15 +94,46 @@ export default {
   },
   methods: {
     roleLabel,
-    login() {
-      const user = {
-        id: Date.now(),
-        username: this.username || `user${Date.now()}`,
-        displayName: this.username || `使用者 ${Date.now().toString().slice(-4)}`,
-        role: this.role,
-      };
-      writeCurrentUser(user);
-      this.$router.push(this.$route.query.redirect || "/");
+    async login() {
+      const name = (this.username || "").trim();
+      if (!name) return alert("請輸入帳號或 Email");
+      try {
+        const users = await getUsers();
+        const found = users.find((u) => u.username === name || u.email === name);
+
+        if (found) {
+          // existing user: if passwordHash present, validate
+          if (found.passwordHash) {
+            if (!this.password) return alert("請輸入密碼以登入");
+            const h = await hashPassword(this.password);
+            if (h !== found.passwordHash) return alert("密碼錯誤");
+          }
+          writeCurrentUser(found);
+          this.$router.push(this.$route.query.redirect || "/");
+          return;
+        }
+
+        // new registration requires password
+        if (!this.password) return alert("註冊需設定密碼");
+        const passwordHash = await hashPassword(this.password);
+        const newUser = {
+          username: name,
+          displayName: name,
+          role: this.role,
+          passwordHash,
+        };
+        try {
+          const created = await addUser(newUser);
+          writeCurrentUser(created);
+          this.$router.push(this.$route.query.redirect || "/");
+        } catch (e) {
+          console.error(e);
+          alert('註冊失敗');
+        }
+      } catch (e) {
+        console.error(e);
+        alert("登入失敗，請稍後再試");
+      }
     },
     quickLogin(user) {
       writeCurrentUser(user);

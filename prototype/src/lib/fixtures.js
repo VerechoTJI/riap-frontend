@@ -1,17 +1,28 @@
+import * as store from "./store";
+
+export function setStoreMode(mode) {
+  store.setMode(mode);
+}
 export async function getListings() {
-  const r = await fetch("/fixtures/listings.json");
-  if (!r.ok) throw new Error("Failed to load listings");
-  return await r.json();
+  return await store.getListings();
 }
 
 export async function getMessages() {
-  const r = await fetch("/fixtures/messages.json");
-  if (!r.ok) throw new Error("Failed to load messages");
-  return await r.json();
+  return await store.getMessages();
 }
 
 export async function getUsers() {
-  const r = await fetch("/fixtures/users.json");
-  if (!r.ok) throw new Error("Failed to load users");
-  return await r.json();
+  return await store.getUsers();
+}
+
+export async function addListing(listing) {
+  return await store.addListing(listing);
+}
+
+export async function addUser(user) {
+  return await store.addUser(user);
+}
+
+export async function addMessage(message) {
+  return await store.addMessage(message);
 }

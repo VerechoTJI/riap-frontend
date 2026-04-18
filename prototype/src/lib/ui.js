@@ -72,7 +72,7 @@ export function statusTone(status) {
 export function roleLabel(role) {
   switch (role) {
     case "tenant":
-      return "承租者";
+      return "房客";
     case "landlord":
       return "房東";
     case "admin":
@@ -113,12 +113,36 @@ export function readCurrentUser() {
   }
 }
 
+function sanitizeUserForStorage(user) {
+  const u = { ...user };
+  delete u.password;
+  delete u.passwordHash;
+  return u;
+}
+
 export function writeCurrentUser(user) {
-  localStorage.setItem("riap_user", JSON.stringify(user));
-  window.dispatchEvent(new CustomEvent("riap-user-changed", { detail: user }));
+  const safe = sanitizeUserForStorage(user);
+  localStorage.setItem("riap_user", JSON.stringify(safe));
+  window.dispatchEvent(new CustomEvent("riap-user-changed", { detail: safe }));
 }
 
 export function clearCurrentUser() {
   localStorage.removeItem("riap_user");
   window.dispatchEvent(new CustomEvent("riap-user-changed", { detail: null }));
+}
+
+export async function hashPassword(password) {
+  try {
+    const enc = new TextEncoder();
+    const buf = await crypto.subtle.digest(
+      "SHA-256",
+      enc.encode(String(password || "")),
+    );
+    return Array.from(new Uint8Array(buf))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+  } catch (e) {
+    // fallback to a simple base64 when SubtleCrypto is unavailable
+    return btoa(String(password || ""));
+  }
 }

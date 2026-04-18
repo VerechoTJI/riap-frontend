@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 import Listings from "../views/Listings.vue";
 import ListingDetail from "../views/ListingDetail.vue";
+import NewListing from "../views/NewListing.vue";
 import Login from "../views/Login.vue";
 import Messages from "../views/Messages.vue";
 import LandlordDashboard from "../views/LandlordDashboard.vue";
@@ -10,6 +11,11 @@ import { readCurrentUser } from "../lib/ui";
 const routes = [
   { path: "/", component: Listings },
   { path: "/login", component: Login },
+  {
+    path: "/listing/new",
+    component: NewListing,
+    meta: { requiresRole: "landlord" },
+  },
   { path: "/listing/:id", component: ListingDetail },
   { path: "/messages", component: Messages, meta: { requiresAuth: true } },
   {

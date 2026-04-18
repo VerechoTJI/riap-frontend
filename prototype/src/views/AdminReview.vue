@@ -31,6 +31,7 @@
           </div>
 
           <div class="action-row">
+            <router-link class="ghost-button" :to="{ path: '/listing/' + listing.id }">檢視詳情</router-link>
             <button class="primary-button" @click="publish(listing)">發布</button>
             <button class="ghost-button" @click="returnItem(listing)">退回</button>
           </div>
