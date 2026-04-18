@@ -88,12 +88,7 @@ export default {
       this.$router.push('/listing/new');
     },
     edit(listing) {
-      const title = prompt("修改標題", listing.title);
-      if (title === null) return;
-      const rent = prompt("修改月租", String(listing.rent));
-      if (rent === null) return;
-      listing.title = title;
-      listing.rent = Number(rent || listing.rent);
+      this.$router.push(`/listing/${listing.id}/edit`);
     },
     remove(listing) {
       if (!confirm(`確定刪除「${listing.title}」？`)) return;

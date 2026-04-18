@@ -26,3 +26,7 @@ export async function addUser(user) {
 export async function addMessage(message) {
   return await store.addMessage(message);
 }
+
+export async function updateListing(listing) {
+  return await store.updateListing(listing);
+}
