@@ -56,7 +56,7 @@
         </div>
 
         <div class="chat-stream">
-          <article v-for="message in threadMessages" :key="message.id" class="bubble" :class="message.from === currentThread.from ? 'outbound' : 'inbound'">
+          <article v-for="message in threadMessages" :key="message.id" class="bubble" :class="isFromCurrentUser(message) ? 'outbound' : 'inbound'">
             <div class="bubble__meta">
               <strong>{{ message.from }}</strong>
               <span>{{ formatDate(message.createdAt) }}</span>
@@ -99,9 +99,10 @@ export default {
     },
     currentThread() {
       const listing = this.listings.find((item) => item.id === this.activeThread?.listingId) || this.listings[0] || {};
+      const user = this.user || { displayName: null, username: null };
       return {
         title: listing.title || "租屋對話",
-        from: readCurrentUser()?.displayName || readCurrentUser()?.username || "我",
+        from: user.displayName || user.username || "我",
         to: listing.landlord || "房東",
         statusLabel: "目前詢問",
       };
@@ -156,6 +157,11 @@ export default {
   },
   methods: {
     formatDate,
+    isFromCurrentUser(message) {
+      const user = this.user || readCurrentUser() || {};
+      const name = user.displayName || user.username || "我";
+      return message.from === name;
+    },
     async send() {
       const user = readCurrentUser() || this.user || { username: "匿名", displayName: "匿名" };
       if (!this.body.trim()) return;
@@ -419,7 +425,8 @@ export default {
 }
 
 .chat-stream {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
   max-height: 520px;
   overflow: auto;
@@ -434,12 +441,12 @@ export default {
 }
 
 .bubble.inbound {
-  justify-self: start;
+  align-self: flex-start;
   background: rgba(255, 255, 255, 0.86);
 }
 
 .bubble.outbound {
-  justify-self: end;
+  align-self: flex-end;
   background: linear-gradient(135deg, rgba(180, 95, 52, 0.16), rgba(242, 215, 191, 0.42));
 }
 
