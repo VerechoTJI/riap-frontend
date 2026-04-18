@@ -55,7 +55,7 @@
           </div>
         </div>
 
-        <div class="chat-stream">
+        <div class="chat-stream" ref="chatStream">
           <article v-for="message in threadMessages" :key="message.id" class="bubble" :class="isFromCurrentUser(message) ? 'outbound' : 'inbound'">
             <div class="bubble__meta">
               <strong>{{ message.from }}</strong>
@@ -127,15 +127,21 @@ export default {
       const [messages, listings] = await Promise.all([getMessages(), getListings()]);
       this.messages = messages;
       this.listings = listings;
-      this.threads = listings.slice(0, 3).map((listing) => ({
-        id: listing.id,
-        listingId: listing.id,
-        title: listing.title,
-        city: listing.city,
-        image: listingImage(listing),
-        preview: messages.find((message) => message.listingId === listing.id)?.body || `${listing.city} · NT$ ${formatTwd(listing.rent)}`,
-      }));
+      this.threads = listings.slice(0, 3).map((listing) => {
+        const msgs = messages.filter((m) => m.listingId === listing.id);
+        const recent = msgs.slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+        return {
+          id: listing.id,
+          listingId: listing.id,
+          title: listing.title,
+          city: listing.city,
+          image: listingImage(listing),
+          preview: recent?.body || `${listing.city} · NT$ ${formatTwd(listing.rent)}`,
+        };
+      });
       this.activeThreadId = Number(this.$route.query.listing) || this.threads[0]?.id || null;
+
+      this.$nextTick(() => this.scrollToBottom());
 
       // bind event handlers so we can remove them later
       this._onMessagesChanged = (e) => this.onMessagesChanged(e);
@@ -190,10 +196,12 @@ export default {
           if (!this.messages.find((m) => m.id === msg.id)) this.messages.unshift(msg);
           const t = this.threads.find((th) => th.id === msg.listingId);
           if (t) t.preview = msg.body;
+          this.$nextTick(() => this.scrollToBottom());
         } else {
           const messages = await getMessages();
           this.messages = messages;
           this.updateThreadPreviews();
+          this.$nextTick(() => this.scrollToBottom());
         }
       } catch (e) {
         console.error(e);
@@ -212,7 +220,7 @@ export default {
               title: listing.title,
               city: listing.city,
               image: listingImage(listing),
-              preview: this.messages.find((m) => m.listingId === listing.id)?.body || `${listing.city} · NT$ ${formatTwd(listing.rent)}`,
+              preview: this.messages.filter((m) => m.listingId === listing.id).slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))[0]?.body || `${listing.city} · NT$ ${formatTwd(listing.rent)}`,
             });
           }
         } else {
@@ -223,7 +231,7 @@ export default {
             title: listing.title,
             city: listing.city,
             image: listingImage(listing),
-            preview: this.messages.find((message) => message.listingId === listing.id)?.body || `${listing.city} · NT$ ${formatTwd(listing.rent)}`,
+            preview: this.messages.filter((m) => m.listingId === listing.id).slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))[0]?.body || `${listing.city} · NT$ ${formatTwd(listing.rent)}`,
           }));
         }
       } catch (e) {
@@ -233,10 +241,25 @@ export default {
 
     updateThreadPreviews() {
       this.threads.forEach((thread) => {
-        const recent = this.messages.find((m) => m.listingId === thread.id);
+        const recent = this.messages.filter((m) => m.listingId === thread.id).slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))[0];
         const listing = this.listings.find((l) => l.id === thread.id) || {};
         thread.preview = recent?.body || `${thread.city || listing.city || ""} · NT$ ${formatTwd(listing.rent || 0)}`;
       });
+    },
+
+    scrollToBottom() {
+      try {
+        const el = this.$refs.chatStream;
+        if (!el) return;
+        el.scrollTop = el.scrollHeight;
+      } catch (e) {
+        // ignore
+      }
+    },
+  },
+  watch: {
+    activeThreadId() {
+      this.$nextTick(() => this.scrollToBottom());
     },
   },
 };
