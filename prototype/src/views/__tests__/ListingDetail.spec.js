@@ -23,7 +23,7 @@ describe('ListingDetail.vue', () => {
   it('correctly parses JSON and redirects to the correct room UUID', async () => {
     // Mock fetch to return a JSON object like the real backend
     global.fetch = vi.fn().mockResolvedValue({
-      json: vi.fn().mockResolvedValue({ id: 'abcd-1234-uuid', tenantId: 'tenant1', landlordId: 'landlord1', listingId: 1 }),
+      json: vi.fn().mockResolvedValue({ chatroomId: 'abcd-1234-uuid', tenantId: 'tenant1', landlordId: 'landlord1', listingId: 1 }),
       text: vi.fn().mockResolvedValue('{"id":"abcd-1234-uuid"}') // Mocking old wrong behavior
     })
 

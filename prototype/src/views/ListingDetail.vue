@@ -126,12 +126,16 @@ export default {
         return;
       }
       try {
-        const res = await fetch("http://localhost:8080/api/chat/createChatRoom?listingId=" + this.listing.id, {
+        const res = await fetch("http://localhost:8080/api/chat/createChatRoom", {
           method: "POST",
-          headers: { "Authorization": "Bearer " + user.id }
+          headers: { 
+            "Authorization": "Bearer " + user.id,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ listingId: String(this.listing.id) })
         });
         const room = await res.json();
-        this.$router.push("/messages?roomId=" + room.id);
+        this.$router.push("/messages?roomId=" + room.chatroomId);
       } catch (e) {
         console.error("Failed to create chat room", e);
         alert("建立聊天室失敗");
