@@ -1,12 +1,20 @@
 import { mount, flushPromises } from '@vue/test-utils'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import Messages from '../Messages.vue'
+import ChatRoomList from '../../components/chat/ChatRoomList.vue'
+import ChatComposer from '../../components/chat/ChatComposer.vue'
 import { createRouter, createWebHistory } from 'vue-router'
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [{ path: '/messages', name: 'messages', component: {} }]
 })
+
+vi.mock('../../lib/fixtures', () => ({
+  getListings: vi.fn().mockResolvedValue([
+    { id: 1, title: 'Test Room', status: 'published' }
+  ])
+}))
 
 describe('Messages.vue', () => {
   beforeEach(() => {
@@ -44,7 +52,7 @@ describe('Messages.vue', () => {
     }))
   })
 
-  it('matches activeThreadId by UUID and sends messages with chatRoomId', async () => {
+  it('matches activeChatRoomId by UUID and sends messages with chatRoomId', async () => {
     // Navigate with UUID in query
     await router.push('/messages?roomId=abcd-1234')
 
@@ -59,12 +67,15 @@ describe('Messages.vue', () => {
 
     await flushPromises()
 
-    // Assuming activeThreadId matches properly
-    expect(wrapper.vm.activeThreadId).toBe('abcd-1234')
+    // Assuming activeChatRoomId matches properly
+    expect(wrapper.vm.activeChatRoomId).toBe('abcd-1234')
 
-    // Simulate sending a message
-    wrapper.vm.body = 'Hello world'
-    await wrapper.vm.send()
+    // Find the composer component and trigger send
+    const composer = wrapper.findComponent(ChatComposer)
+    expect(composer.exists()).toBe(true)
+    
+    await composer.vm.$emit('send', 'Hello world')
+    await flushPromises()
     
     // Check if fetch was called correctly
     expect(global.fetch).toHaveBeenCalledWith(

@@ -8,7 +8,7 @@ const router = createRouter({
   routes: [{ path: '/messages', name: 'messages', component: {} }]
 })
 
-vi.mock('../lib/fixtures', () => ({
+vi.mock('../../lib/fixtures', () => ({
   getListings: vi.fn().mockResolvedValue([
     { id: 1, title: 'Test Room', status: 'published' }
   ])
