@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "listingId": 1,
+    "from": "Alice Chen",
+    "to": "Bob Wang",
+    "body": "您好，想詢問房源是否仍在出租？",
+    "sample": true,
+    "createdAt": "2026-04-18T09:10:00.000Z"
+  },
+  {
+    "id": 2,
+    "listingId": 1,
+    "from": "Bob Wang",
+    "to": "Alice Chen",
+    "body": "可以，歡迎約看。",
+    "sample": true,
+    "createdAt": "2026-04-18T09:18:00.000Z"
+  }
+]
