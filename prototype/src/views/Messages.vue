@@ -93,7 +93,7 @@ export default {
       return this.chatRooms.find((room) => room.id === this.activeChatRoomId) || this.chatRooms[0] || null;
     },
     currentChatRoom() {
-      const listing = this.listings.find((item) => item.id === this.activeRoom?.listingId) || this.listings[0] || {};
+      const listing = this.listings.find((item) => String(item.id) === String(this.activeRoom?.listingId)) || this.listings[0] || {};
       const user = this.user || { displayName: null, username: null, role: null };
 
       const landlordName = "房東"; // Simplified for prototype
@@ -154,7 +154,7 @@ export default {
         const rooms = await res.json();
         
         this.chatRooms = rooms.map(room => {
-          const listing = this.listings.find(l => l.id === room.listingId) || {};
+          const listing = this.listings.find(l => String(l.id) === String(room.listingId)) || {};
           return {
             id: room.id,
             listingId: room.listingId,
