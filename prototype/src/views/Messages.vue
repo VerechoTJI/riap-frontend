@@ -185,7 +185,7 @@ export default {
           id: m.id,
           body: m.content,
           senderUserId: m.senderUserId,
-          from: m.senderUserId === this.user.id ? "我" : "對方",
+          from: String(m.senderUserId) === String(this.user.id) ? "我" : "對方",
           createdAt: m.sentAt,
           isRead: m.isRead
         }));
