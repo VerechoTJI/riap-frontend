@@ -63,7 +63,7 @@
 </template>
 
 <script>
-import { getListings } from "../lib/fixtures";
+import { getListings, getUsers } from "../lib/fixtures";
 import { listingImage, readCurrentUser } from "../lib/ui";
 import ChatRoomList from "../components/chat/ChatRoomList.vue";
 import ChatStream from "../components/chat/ChatStream.vue";
@@ -84,6 +84,7 @@ export default {
       chatRooms: [],
       activeChatRoomId: null,
       listings: [],
+      users: [],
       user: readCurrentUser(),
       ws: null
     };
@@ -96,9 +97,15 @@ export default {
       const listing = this.listings.find((item) => String(item.id) === String(this.activeRoom?.listingId)) || this.listings[0] || {};
       const user = this.user || { displayName: null, username: null, role: null };
 
-      const landlordName = "房東"; // Simplified for prototype
       let fromName = user.displayName || user.username || "我";
-      let toName = user.role === "landlord" ? "房客" : landlordName;
+      let toName = "對方";
+      if (this.activeRoom) {
+         const otherUserId = user.role === "landlord" ? this.activeRoom.tenantId : this.activeRoom.landlordId;
+         const otherUser = this.users.find(u => String(u.id) === String(otherUserId));
+         if (otherUser) {
+             toName = otherUser.displayName || otherUser.username;
+         }
+      }
 
       return {
         title: listing.title || "租屋對話",
@@ -122,6 +129,7 @@ export default {
     if (!this.user) return;
     try {
       this.listings = await getListings();
+      this.users = await getUsers();
       await this.fetchRooms();
       this.activeChatRoomId = this.$route.query.roomId || this.chatRooms[0]?.id || null;
       
@@ -159,6 +167,8 @@ export default {
           return {
             id: room.id,
             listingId: room.listingId,
+            tenantId: room.tenantId,
+            landlordId: room.landlordId,
             title: listing.title || "租屋對話",
             city: listing.city || "",
             image: listingImage(listing),
@@ -181,14 +191,22 @@ export default {
         const msgs = await res.json();
         
         // Map backend message format to frontend format
-        this.messages = msgs.map(m => ({
-          id: m.id,
-          body: m.content,
-          senderUserId: m.senderUserId,
-          from: String(m.senderUserId) === String(this.user.id) ? "我" : "對方",
-          createdAt: m.sentAt,
-          isRead: m.isRead
-        }));
+        this.messages = msgs.map(m => {
+          const isMe = String(m.senderUserId) === String(this.user.id);
+          let fromName = "我";
+          if (!isMe) {
+            const senderUser = this.users.find(u => String(u.id) === String(m.senderUserId));
+            fromName = senderUser ? (senderUser.displayName || senderUser.username) : "對方";
+          }
+          return {
+            id: m.id,
+            body: m.content,
+            senderUserId: m.senderUserId,
+            from: fromName,
+            createdAt: m.sentAt,
+            isRead: m.isRead
+          };
+        });
         
         // Clear unread dot
         const room = this.chatRooms.find(r => r.id === roomId);

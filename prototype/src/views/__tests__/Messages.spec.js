@@ -12,7 +12,11 @@ const router = createRouter({
 
 vi.mock('../../lib/fixtures', () => ({
   getListings: vi.fn().mockResolvedValue([
-    { id: 1, title: 'Test Room', status: 'published' }
+    { id: 1, title: 'Test Room', city: 'Taipei', rent: 15000, status: 'published' }
+  ]),
+  getUsers: vi.fn().mockResolvedValue([
+    { id: "tenant1", username: "test_tenant", displayName: "Test Tenant", role: "tenant" },
+    { id: "2", username: "test_landlord", displayName: "Test Landlord", role: "landlord" }
   ])
 }))
 
