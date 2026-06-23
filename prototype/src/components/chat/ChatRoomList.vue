@@ -12,8 +12,9 @@
       <div>
         <strong>
           <span v-if="room.hasUnread" class="unread-dot"></span>
-          {{ room.title }}
+          {{ room.otherUserName }}
         </strong>
+        <p class="listing-ref">{{ room.title }}</p>
         <p>{{ room.preview }}</p>
       </div>
     </div>
@@ -85,6 +86,13 @@ export default {
 .thread-item p {
   color: var(--muted);
   margin-top: 4px;
+}
+
+.listing-ref {
+  font-size: 0.85em;
+  color: var(--primary);
+  margin-top: 2px !important;
+  margin-bottom: 2px !important;
 }
 
 .unread-dot {

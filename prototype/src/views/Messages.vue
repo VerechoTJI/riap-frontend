@@ -182,11 +182,20 @@ export default {
         
         this.chatRooms = rooms.map(room => {
           const listing = this.listings.find(l => String(l.id) === String(room.listingId)) || {};
+          
+          let otherName = "對方";
+          const otherUserId = this.user.role === "landlord" ? room.tenantId : room.landlordId;
+          const otherUser = this.users.find(u => String(u.id) === String(otherUserId));
+          if (otherUser) {
+            otherName = otherUser.displayName || otherUser.username;
+          }
+
           return {
             id: room.id,
             listingId: room.listingId,
             tenantId: room.tenantId,
             landlordId: room.landlordId,
+            otherUserName: otherName,
             title: listing.title || "租屋對話",
             city: listing.city || "",
             image: listingImage(listing),
