@@ -67,6 +67,13 @@
 
             <ChatComposer @send="sendMessage" />
           </main>
+
+          <main class="chat-panel chat-panel--empty" v-else>
+            <div class="empty-selection">
+              <span class="empty-icon">💬</span>
+              <p>請從左側列表選擇對話</p>
+            </div>
+          </main>
         </div>
       </template>
     </template>
@@ -102,7 +109,7 @@ export default {
   },
   computed: {
     activeRoom() {
-      return this.chatRooms.find((room) => room.id === this.activeChatRoomId) || this.chatRooms[0] || null;
+      return this.chatRooms.find((room) => room.id === this.activeChatRoomId) || null;
     },
     currentChatRoom() {
       const listing = this.listings.find((item) => String(item.id) === String(this.activeRoom?.listingId)) || this.listings[0] || {};
@@ -142,7 +149,7 @@ export default {
       this.listings = await getListings();
       this.users = await getUsers();
       await this.fetchRooms();
-      this.activeChatRoomId = this.$route.query.roomId || this.chatRooms[0]?.id || null;
+      this.activeChatRoomId = this.$route.query.roomId || null;
       
       if (this.activeChatRoomId) {
         await this.fetchHistory(this.activeChatRoomId);
@@ -438,6 +445,24 @@ export default {
   border-radius: 999px;
   background: rgba(23, 50, 77, 0.06);
   color: var(--secondary);
+}
+
+.chat-panel--empty {
+  display: grid;
+  place-items: center;
+  min-height: 400px;
+}
+
+.empty-selection {
+  text-align: center;
+  color: var(--muted);
+}
+
+.empty-selection .empty-icon {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: 16px;
+  opacity: 0.6;
 }
 
 @media (max-width: 980px) {
