@@ -239,8 +239,8 @@ export default {
           if (data.connectionStatus) return; // ignore connection ack
           
           if (data.readBy) {
-            // Read receipt received
-            if (data.chatRoomId === this.activeChatRoomId) {
+            // Read receipt received from the other party
+            if (data.chatRoomId === this.activeChatRoomId && String(data.readBy) !== String(this.user.id)) {
               this.messages.forEach(m => m.isRead = true);
             }
             return;
