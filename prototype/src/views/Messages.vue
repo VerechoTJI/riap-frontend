@@ -10,54 +10,65 @@
     </div>
 
     <template v-else>
-      <div class="messages-hero">
-        <div>
-          <span class="eyebrow">即時溝通</span>
-          <h1>把詢問、回覆與房源脈絡整理成一條清晰的對話。</h1>
-          <p>
-            訊息內容儲存在記憶體，用於展示 tenant / landlord 的互動流程。
-          </p>
-        </div>
-
-        <div class="conversation-card">
-          <div class="conversation-card__media">
-            <img :src="listingHero" alt="目前對話房源" />
-          </div>
-          <div class="conversation-card__meta">
-            <strong>{{ currentListingTitle }}</strong>
-            <span>{{ currentListingCity }}</span>
-          </div>
+      <div v-if="chatRooms.length === 0" class="messages-lock">
+        <div class="messages-lock__card">
+          <span class="eyebrow">尚無對話</span>
+          <h1>目前沒有聊天紀錄</h1>
+          <p>您還沒有與任何房東或房客進行過對話，趕快去探索有興趣的房源吧！</p>
+          <router-link class="primary-button" to="/">探索房源</router-link>
         </div>
       </div>
 
-      <div class="messages-layout">
-        <ChatRoomList
-          :chatRooms="chatRooms"
-          :activeChatRoomId="activeChatRoomId"
-          @select="selectRoom"
-        />
-
-        <main class="chat-panel">
-          <div class="chat-panel__header">
-            <div>
-              <span class="eyebrow">{{ currentChatRoom.statusLabel }}</span>
-              <h2>{{ currentChatRoom.title }}</h2>
-            </div>
-            <div class="chat-panel__users">
-              <span>{{ currentChatRoom.from }}</span>
-              <span>→</span>
-              <span>{{ currentChatRoom.to }}</span>
-            </div>
+      <template v-else>
+        <div class="messages-hero">
+          <div>
+            <span class="eyebrow">即時溝通</span>
+            <h1>把詢問、回覆與房源脈絡整理成一條清晰的對話。</h1>
+            <p>
+              訊息內容儲存在記憶體，用於展示 tenant / landlord 的互動流程。
+            </p>
           </div>
 
-          <ChatStream
-            :messages="messages"
-            :currentUserId="user.id"
+          <div class="conversation-card">
+            <div class="conversation-card__media">
+              <img :src="listingHero" alt="目前對話房源" />
+            </div>
+            <div class="conversation-card__meta">
+              <strong>{{ currentListingTitle }}</strong>
+              <span>{{ currentListingCity }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="messages-layout">
+          <ChatRoomList
+            :chatRooms="chatRooms"
+            :activeChatRoomId="activeChatRoomId"
+            @select="selectRoom"
           />
 
-          <ChatComposer @send="sendMessage" />
-        </main>
-      </div>
+          <main class="chat-panel" v-if="activeRoom">
+            <div class="chat-panel__header">
+              <div>
+                <span class="eyebrow">{{ currentChatRoom.statusLabel }}</span>
+                <h2>{{ currentChatRoom.title }}</h2>
+              </div>
+              <div class="chat-panel__users">
+                <span>{{ currentChatRoom.from }}</span>
+                <span>→</span>
+                <span>{{ currentChatRoom.to }}</span>
+              </div>
+            </div>
+
+            <ChatStream
+              :messages="messages"
+              :currentUserId="user.id"
+            />
+
+            <ChatComposer @send="sendMessage" />
+          </main>
+        </div>
+      </template>
     </template>
   </section>
 </template>
@@ -204,7 +215,7 @@ export default {
             senderUserId: m.senderUserId,
             from: fromName,
             createdAt: m.sentAt,
-            isRead: m.isRead
+            isRead: m.isRead !== undefined ? m.isRead : m.read
           };
         });
         
