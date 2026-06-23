@@ -149,7 +149,8 @@ export default {
     async fetchRooms() {
       try {
         const res = await fetch(`${API_BASE}/rooms`, {
-          headers: { "Authorization": `Bearer ${this.user.id}` }
+          headers: { "Authorization": `Bearer ${this.user.id}` },
+          cache: "no-store"
         });
         const rooms = await res.json();
         
@@ -174,7 +175,8 @@ export default {
       if (!roomId) return;
       try {
         const res = await fetch(`${API_BASE}/history/${roomId}`, {
-          headers: { "Authorization": `Bearer ${this.user.id}` }
+          headers: { "Authorization": `Bearer ${this.user.id}` },
+          cache: "no-store"
         });
         const msgs = await res.json();
         
