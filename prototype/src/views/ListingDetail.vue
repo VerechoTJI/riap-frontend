@@ -72,6 +72,7 @@
         </div>
       </aside>
     </div>
+  </div>
 
     <div v-else class="loading-card">載入房源中...</div>
   </section>

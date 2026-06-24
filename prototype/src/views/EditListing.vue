@@ -8,7 +8,7 @@
       <h1>編輯房源</h1>
 
       <label class="field">
-        <span>標題</span>
+        <span>標題 <span class="required">*</span></span>
         <input v-model="form.title" />
       </label>
 
@@ -23,7 +23,7 @@
       </label>
 
       <label class="field">
-        <span>月租 (NT$)</span>
+        <span>月租 (NT$) <span class="required">*</span></span>
         <input type="number" v-model.number="form.rent" />
       </label>
 
@@ -176,7 +176,8 @@ export default {
 .loading-card { padding: 20px; border-radius: 18px; background: var(--card); }
 .form-card { padding: 20px; border-radius: 18px; background: var(--card); }
 .field { display:block; margin:10px 0 }
-.field span { display:block; font-weight:600; margin-bottom:6px }
+.field > span { display:block; font-weight:600; margin-bottom:6px }
+.required { color: #e05c5c; margin-left: 4px; display: inline; }
 .field input, .field textarea { width:100%; padding:10px; border-radius:8px; border:1px solid rgba(0,0,0,0.08) }
 .action-row { display:flex; gap:12px; margin-top:12px }
 </style>
