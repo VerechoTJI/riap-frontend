@@ -5,6 +5,11 @@ export default defineConfig({
   plugins: [vue()],
   test: {
     environment: "happy-dom",
+    environmentOptions: {
+      happyDOM: {
+        url: 'http://localhost:8080/'
+      }
+    }
   },
   server: {
     proxy: {

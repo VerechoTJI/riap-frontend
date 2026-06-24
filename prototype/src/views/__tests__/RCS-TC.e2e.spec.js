@@ -25,7 +25,9 @@ const router = createRouter({
   ]
 })
 
-describe('RCS Integration Tests (Black-box with Real API)', () => {
+const isSkipped = process.env.SKIP_E2E === 'true'
+
+describe.skipIf(isSkipped)('RCS Integration Tests (Black-box with Real API)', () => {
   let createdRoomId = null;
 
   beforeAll(() => {
