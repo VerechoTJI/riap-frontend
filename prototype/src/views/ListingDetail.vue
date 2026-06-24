@@ -53,25 +53,24 @@
         </div>
 
         <aside class="detail-aside">
-          <div class="contact-card">
-            <span class="eyebrow">聯繫房東</span>
-            <h3>{{ listing.landlord }}</h3>
-            <p>從這個細節頁可直接前往訊息頁，延續這筆房源的詢問流程。</p>
-            <router-link class="primary-button" :to="{ path: '/messages', query: { listing: listing.id } }">
-              立即詢問
-            </router-link>
-          </div>
+        <div v-if="!currentUser || currentUser.role !== 'admin'" class="contact-card">
+          <span class="eyebrow">聯繫房東</span>
+          <h3>{{ listing.landlord }}</h3>
+          <p>從這個細節頁可直接前往訊息頁，延續這筆房源的詢問流程。</p>
+          <router-link class="primary-button" :to="{ path: '/messages', query: { listing: listing.id } }">
+            立即詢問
+          </router-link>
+        </div>
 
-          <div class="section-card note-card">
-            <h2>補充資訊</h2>
-            <ul>
-              <li>刊登時間：{{ listing.postedAt }}</li>
-              <li>類型：{{ listing.type }}</li>
-              <li>備註：{{ listing.reviewNote || '無' }}</li>
-            </ul>
-          </div>
-        </aside>
-      </div>
+        <div class="section-card note-card">
+          <h2>補充資訊</h2>
+          <ul>
+            <li>刊登時間：{{ listing.postedAt }}</li>
+            <li>類型：{{ listing.type }}</li>
+            <li>備註：{{ listing.reviewNote || '無' }}</li>
+          </ul>
+        </div>
+      </aside>
     </div>
 
     <div v-else class="loading-card">載入房源中...</div>
@@ -80,11 +79,12 @@
 
 <script>
 import { getListings } from "../lib/fixtures";
-import { formatTwd, handleListingImageError, listingImage, statusLabel, statusTone } from "../lib/ui";
+import { formatTwd, handleListingImageError, listingImage, statusLabel, statusTone, readCurrentUser } from "../lib/ui";
 
 export default {
   data() {
     return {
+      currentUser: null,
       listing: {
         title: "載入中",
         description: "",
@@ -104,6 +104,7 @@ export default {
     };
   },
   async created() {
+    this.currentUser = readCurrentUser();
     try {
       const id = Number(this.$route.params.id);
       const all = await getListings();

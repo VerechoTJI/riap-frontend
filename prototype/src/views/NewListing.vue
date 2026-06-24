@@ -134,9 +134,17 @@ export default {
         title: this.form.title,
         description: this.form.description,
         area: Number(this.form.size),
+        size: Number(this.form.size),
+        city: this.form.city,
+        address: this.form.address,
+        layout: this.form.layout,
         floor: Number(this.form.floor),
+        availableFrom: this.form.availableFrom,
+        image: this.form.image || undefined,
+        features: (this.form.featuresText || "").split(/\s*,\s*/).map(s => s.trim()).filter(Boolean),
         propertyType: this.form.propertyType,
-        landlordId: current.id, // Assuming UUID from UAS
+        landlordId: current.id,
+        landlord: current.displayName || current.username,
         feeDisclosure: {
           rent: this.form.rent,
           deposit: this.form.deposit,
