@@ -107,6 +107,9 @@ export default {
     try {
       const id = String(this.$route.params.id);
       this.listing = await getListingById(id);
+      if (this.listing && !this.listing.id) {
+        this.listing.id = id;
+      }
     } catch (error) {
       console.error(error);
       this.listing = null;

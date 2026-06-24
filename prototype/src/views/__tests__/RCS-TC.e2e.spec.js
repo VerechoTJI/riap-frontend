@@ -46,7 +46,7 @@ describe.skipIf(isSkipped)('RCS Integration Tests (Black-box with Real API)', ()
       const data = await res.json()
       const items = data.content || data.data || data.listings || []
       if (items.length > 0) {
-        realListingId = items[0].id || '1'
+        realListingId = items[0].id || (items[0]._links ? items[0]._links.self.href.split('/').pop() : '1')
         window.__TEST_REAL_LISTING_ID = realListingId
       }
     } catch (e) {

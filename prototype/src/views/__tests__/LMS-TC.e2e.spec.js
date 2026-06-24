@@ -10,24 +10,11 @@ const isSkipped = process.argv.includes('--skip-e2e')
 
 describe.skipIf(isSkipped)('LMS Integration Tests (Direct E2E)', () => {
   let router;
-  let realListingId = '1';
 
   beforeAll(async () => {
     window.alert = vi.fn()
     window.prompt = vi.fn()
     window.confirm = vi.fn()
-    
-    try {
-      const res = await fetch('/api/listings?size=1')
-      if (!res.ok) throw new Error('API Error: ' + res.status)
-      const data = await res.json()
-      const items = data.content || data.data || data.listings || []
-      if (items.length > 0) {
-        realListingId = items[0].id || '1'
-      }
-    } catch (e) {
-      console.error('LMS-TC fetch realListingId failed:', e)
-    }
     
     router = createRouter({
       history: createWebHistory(),
@@ -149,7 +136,7 @@ describe.skipIf(isSkipped)('LMS Integration Tests (Direct E2E)', () => {
     const wrapper = mount(EditListing, {
       global: { 
         plugins: [router],
-        mocks: { $route: { params: { id: realListingId } } }
+        mocks: { $route: { params: { id: '1' } } }
       }
     })
 
