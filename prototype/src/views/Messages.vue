@@ -179,8 +179,6 @@ export default {
         const rooms = await res.json();
         
         this.chatRooms = rooms.map(room => {
-          const listing = this.listings.find(l => String(l.id) === String(room.listingId)) || {};
-          
           return {
             id: room.id,
             listingId: room.listingId,
@@ -188,9 +186,9 @@ export default {
             landlordId: room.landlordId,
             otherUserName: room.otherUserName || "對方",
             title: room.listingTitle || "租屋對話",
-            city: listing.city || "",
-            image: listingImage(listing),
-            preview: "點擊查看對話",
+            city: room.listingCity || "",
+            image: room.listingImageUrl || "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=400&q=80",
+            preview: room.lastMessage || "尚未有對話",
             hasUnread: room.hasUnread || false
           };
         });
