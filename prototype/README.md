@@ -4,8 +4,8 @@
 
 目錄結構（相對於專案根目錄）：
 
-- `frontend/prototype/src/` — Vue 元件、頁面與 client-side 狀態管理
-- `frontend/prototype/public/fixtures/` — JSON 假資料：`users.json`, `listings.json`, `messages.json`
+- `frontend/prototype/src/` — Vue 元件、頁面與 API 串接邏輯
+- `frontend/prototype/vite.config.js` — Vite 設定
 - `frontend/prototype/vite.config.js` — Vite 設定
 - `frontend/prototype/index.html` — Vite 入口頁
 
@@ -23,8 +23,8 @@ npm run dev
 
 備註（開發者提示）
 
-- 過去頁面使用 Vue 與 client-side state 來讀取本地假資料，但**現在已切換為串接真實後端 API (`http://localhost:8080`)**。
-- 若要快速查看列表與明細，請確保後端伺服器（Spring Boot）已在背景啟動。
+- **現在已全面切換為串接真實後端 API (`http://localhost:8080`)**。不再依賴本地 JSON 假資料。
+- 若要正常使用前端系統，**必須確保後端伺服器（Spring Boot）已在背景啟動**，否則會遇到連線錯誤。
 - UI 文案使用繁體中文。
 
 ## 執行前端測試 (Vitest)
@@ -49,19 +49,19 @@ Vite 開發伺服器說明
 
 Admin / Landlord testing notes
 
-- 在 `public/fixtures/users.json` 中加入一個 `landlord` 與一個 `admin` 帳號；使用者登入時可用相應帳號模擬不同角色介面。
-- `public/fixtures/listings.json` 應包含多個 `published` 與 `pending` 狀態的項目，admin review 頁面會顯示 `pending` 項目以測試發佈與退回流程。
+- 系統重啟後端時會自動寫入假資料（DemoDataInitializer），預設的測試帳號為：
+  - 房東: `landlord` (密碼 `password`)
+  - 房客: `tenant` (密碼 `password`)
+  - 管理員: `admin` (密碼 `password`)
 
 已知技術債與限制（待辦）
 
-- 無後端永續化（變更僅儲存在當前瀏覽器會話或 localStorage）。
-- 無檔案上傳或圖片處理，圖片可以用占位符顯示。
-- 權限驗證與安全機制為模擬狀態，不應用於生產。
+- 圖片暫時以 URL 方式存儲，尚未實作實際圖片檔案上傳。
 
-建議的迭代步驟
+開發歷程
 
-- 將 fixtures 與 UI 綁定，完成基本搜尋、分頁與過濾；然後加入簡單的訊息模擬流程。（已完成）
-- 若要串接真實後端，實作一個小型 HTTP API 並將前端中的 fetch 呼叫切換為真實端點。（**目前已全面串接真實後端**）
+- 最初將 fixtures 與 UI 綁定，完成基本搜尋、分頁與過濾。
+- **目前已全面串接真實後端（Spring Boot + PostgreSQL）**，包含完整的 JWT 登入、WebSocket 聊天室與資料庫永續化。
 
 作者: 開發團隊原型
 日期: 2026-04-18
