@@ -10,96 +10,121 @@
     </div>
 
     <template v-else>
-    <div class="messages-hero">
-      <div>
-        <span class="eyebrow">即時溝通</span>
-        <h1>把詢問、回覆與房源脈絡整理成一條清晰的對話。</h1>
-        <p>
-          訊息內容只儲存在前端記憶體，適合用於展示 tenant / landlord 的互動流程。
-        </p>
-      </div>
-
-      <div class="conversation-card">
-        <div class="conversation-card__media">
-          <img :src="listingHero" alt="目前對話房源" />
-        </div>
-        <div class="conversation-card__meta">
-          <strong>{{ currentListingTitle }}</strong>
-          <span>{{ currentListingCity }}</span>
+      <div v-if="chatRooms.length === 0" class="messages-lock">
+        <div class="messages-lock__card">
+          <span class="eyebrow">尚無對話</span>
+          <h1>目前沒有聊天紀錄</h1>
+          <p>您還沒有與任何房東或房客進行過對話，趕快去探索有興趣的房源吧！</p>
+          <router-link class="primary-button" to="/">探索房源</router-link>
         </div>
       </div>
-    </div>
 
-    <div class="messages-layout">
-      <aside class="thread-list">
-        <div class="section-title">對話列表</div>
-        <div v-for="thread in threads" :key="thread.id" class="thread-item" :class="{ active: thread.id === activeThreadId }" @click="activeThreadId = thread.id">
-          <img :src="thread.image" :alt="thread.title" />
+      <template v-else>
+        <div class="messages-hero">
           <div>
-            <strong>{{ thread.title }}</strong>
-            <p>{{ thread.preview }}</p>
+            <span class="eyebrow">即時溝通</span>
+            <h1>把詢問、回覆與房源脈絡整理成一條清晰的對話。</h1>
+            <p>
+              訊息內容儲存在記憶體，用於展示 tenant / landlord 的互動流程。
+            </p>
           </div>
-        </div>
-      </aside>
 
-      <main class="chat-panel">
-        <div class="chat-panel__header">
-          <div>
-            <span class="eyebrow">{{ currentThread.statusLabel }}</span>
-            <h2>{{ currentThread.title }}</h2>
-          </div>
-          <div class="chat-panel__users">
-            <span>{{ currentThread.from }}</span>
-            <span>→</span>
-            <span>{{ currentThread.to }}</span>
-          </div>
-        </div>
-
-        <div class="chat-stream" ref="chatStream">
-          <article v-for="message in threadMessages" :key="message.id" class="bubble" :class="isFromCurrentUser(message) ? 'outbound' : 'inbound'">
-            <div class="bubble__meta">
-              <strong>{{ message.from }}</strong>
-              <span>{{ formatDate(message.createdAt) }}</span>
+          <div class="conversation-card">
+            <div class="conversation-card__media">
+              <img :src="listingHero" alt="目前對話房源" />
             </div>
-            <p>{{ message.body }}</p>
-          </article>
-        </div>
-
-        <div class="composer">
-          <textarea v-model="body" placeholder="輸入訊息，與房東建立第一句對話..."></textarea>
-          <div class="composer__actions">
-            <span>{{ body.length }}/240</span>
-            <button class="primary-button" @click="send">傳送訊息</button>
+            <div class="conversation-card__meta">
+              <strong>{{ currentListingTitle }}</strong>
+              <span>{{ currentListingCity }}</span>
+            </div>
           </div>
         </div>
-      </main>
-    </div>
+
+        <div class="messages-layout">
+          <ChatRoomList
+            :chatRooms="chatRooms"
+            :activeChatRoomId="activeChatRoomId"
+            @select="selectRoom"
+          />
+
+          <main class="chat-panel" v-if="activeRoom">
+            <div class="chat-panel__header">
+              <div>
+                <span class="eyebrow">{{ currentChatRoom.statusLabel }}</span>
+                <h2>{{ currentChatRoom.title }}</h2>
+              </div>
+              <div class="chat-panel__users">
+                <span>{{ currentChatRoom.from }}</span>
+                <span>→</span>
+                <span>{{ currentChatRoom.to }}</span>
+              </div>
+            </div>
+
+            <ChatStream
+              :messages="messages"
+              :currentUserId="user.id"
+            />
+
+            <ChatComposer @send="sendMessage" />
+          </main>
+
+          <main class="chat-panel chat-panel--empty" v-else>
+            <div class="empty-selection">
+              <span class="empty-icon">💬</span>
+              <p>請從左側列表選擇對話</p>
+            </div>
+          </main>
+        </div>
+      </template>
     </template>
   </section>
 </template>
 
 <script>
-import { getListings, getMessages, addMessage } from "../lib/fixtures";
-import { formatDate, formatTwd, listingImage, readCurrentUser } from "../lib/ui";
+import { getListings, getUsers } from "../lib/fixtures";
+import { listingImage, readCurrentUser } from "../lib/ui";
+import ChatRoomList from "../components/chat/ChatRoomList.vue";
+import ChatStream from "../components/chat/ChatStream.vue";
+import ChatComposer from "../components/chat/ChatComposer.vue";
+
+const API_BASE = "http://localhost:8080/api/chat";
+const WS_BASE = "ws://localhost:8080/ws/chat/connect";
 
 export default {
+  components: {
+    ChatRoomList,
+    ChatStream,
+    ChatComposer
+  },
   data() {
     return {
-      body: "",
       messages: [],
-      threads: [],
-      activeThreadId: null,
+      chatRooms: [],
+      activeChatRoomId: null,
       listings: [],
+      users: [],
       user: readCurrentUser(),
+      ws: null
     };
   },
   computed: {
-    activeThread() {
-      return this.threads.find((thread) => thread.id === this.activeThreadId) || this.threads[0] || null;
+    activeRoom() {
+      return this.chatRooms.find((room) => room.id === this.activeChatRoomId) || null;
     },
-    currentThread() {
-      const listing = this.listings.find((item) => item.id === this.activeThread?.listingId) || this.listings[0] || {};
-      const user = this.user || { displayName: null, username: null };
+    currentChatRoom() {
+      const listing = this.listings.find((item) => String(item.id) === String(this.activeRoom?.listingId)) || this.listings[0] || {};
+      const user = this.user || { displayName: null, username: null, role: null };
+
+      let fromName = user.displayName || user.username || "我";
+      let toName = "對方";
+      if (this.activeRoom) {
+         const otherUserId = user.role === "landlord" ? this.activeRoom.tenantId : this.activeRoom.landlordId;
+         const otherUser = this.users.find(u => String(u.id) === String(otherUserId));
+         if (otherUser) {
+             toName = otherUser.displayName || otherUser.username;
+         }
+      }
+
       return {
         title: listing.title || "租屋對話",
         from: user.displayName || user.username || "我",
@@ -108,188 +133,184 @@ export default {
       };
     },
     currentListingTitle() {
-      return this.activeThread?.title || "租屋對話";
+      return this.activeRoom?.title || "租屋對話";
     },
     currentListingCity() {
-      return this.activeThread?.city || "尚未選擇房源";
+      return this.activeRoom?.city || "尚未選擇房源";
     },
     listingHero() {
-      return this.activeThread?.image || listingImage(this.listings[0] || { id: 1 });
-    },
-    threadMessages() {
-      return this.messages
-        .filter((message) => message.listingId === this.activeThreadId)
-        .slice()
-        .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+      return this.activeRoom?.image || listingImage(this.listings[0] || { id: 1 });
     },
   },
   async created() {
     this.user = readCurrentUser();
     if (!this.user) return;
     try {
-      const [messages, listings] = await Promise.all([getMessages(), getListings()]);
-      // hide sample messages from admins
-      const filteredMessages = this.user && this.user.role === "admin" ? messages.filter((m) => !m.sample) : messages;
-      this.messages = filteredMessages;
-      this.listings = listings;
-      this.threads = this.buildThreads(listings, this.messages);
-      this.activeThreadId = Number(this.$route.query.listing) || this.threads[0]?.id || null;
-
-      this.$nextTick(() => this.scrollToBottom());
-
-      // bind event handlers so we can remove them later
-      this._onMessagesChanged = (e) => this.onMessagesChanged(e);
-      this._onListingsChanged = (e) => this.onListingsChanged(e);
-      window.addEventListener("riap-messages-changed", this._onMessagesChanged);
-      window.addEventListener("riap-listings-changed", this._onListingsChanged);
+      this.listings = await getListings();
+      this.users = await getUsers();
+      await this.fetchRooms();
+      this.activeChatRoomId = this.$route.query.roomId || null;
+      
+      if (this.activeChatRoomId) {
+        await this.fetchHistory(this.activeChatRoomId);
+      }
+      
+      window.addEventListener("riap-ws-message", this.handleWsMessage);
     } catch (error) {
-      console.error(error);
+      console.error("Initialization error:", error);
     }
   },
 
   beforeUnmount() {
-    try {
-      window.removeEventListener("riap-messages-changed", this._onMessagesChanged);
-      window.removeEventListener("riap-listings-changed", this._onListingsChanged);
-    } catch (e) {
-      // ignore
-    }
+    window.removeEventListener("riap-ws-message", this.handleWsMessage);
   },
   methods: {
-    formatDate,
-    isFromCurrentUser(message) {
-      const user = this.user || readCurrentUser() || {};
-      const name = user.displayName || user.username || "我";
-      return message.from === name;
+    selectRoom(roomId) {
+      this.activeChatRoomId = roomId;
+      // Also update URL so refresh works
+      this.$router.replace({ query: { ...this.$route.query, roomId } });
     },
-    async send() {
-      const user = readCurrentUser() || this.user || { username: "匿名", displayName: "匿名" };
-      if (!this.body.trim()) return;
-      if (!this.activeThreadId) return alert("請先選擇對話或房源");
-      const payload = {
-        listingId: this.activeThreadId,
-        from: user.displayName || user.username,
-        to: this.currentThread.to,
-        body: this.body.trim(),
-        createdAt: new Date().toISOString(),
-      };
+    async fetchRooms() {
       try {
-        await addMessage(payload);
-        // actual insertion and UI update will be handled by the "riap-messages-changed" event
-        this.body = "";
+        const res = await fetch(`${API_BASE}/rooms`, {
+          headers: { "Authorization": `Bearer ${this.user.id}` },
+          cache: "no-store"
+        });
+        const rooms = await res.json();
+        
+        this.chatRooms = rooms.map(room => {
+          const listing = this.listings.find(l => String(l.id) === String(room.listingId)) || {};
+          
+          return {
+            id: room.id,
+            listingId: room.listingId,
+            tenantId: room.tenantId,
+            landlordId: room.landlordId,
+            otherUserName: room.otherUserName || "對方",
+            title: room.listingTitle || "租屋對話",
+            city: listing.city || "",
+            image: listingImage(listing),
+            preview: "點擊查看對話",
+            hasUnread: room.hasUnread || false
+          };
+        });
+      } catch (e) {
+        console.error("Failed to fetch rooms", e);
+      }
+    },
+    
+    async fetchHistory(roomId) {
+      if (!roomId) return;
+      try {
+        const res = await fetch(`${API_BASE}/history/${roomId}`, {
+          headers: { "Authorization": `Bearer ${this.user.id}` },
+          cache: "no-store"
+        });
+        const msgs = await res.json();
+        
+        // Map backend message format to frontend format
+        this.messages = msgs.map(m => {
+          const isMe = String(m.senderUserId) === String(this.user.id);
+          let fromName = "我";
+          if (!isMe) {
+            const senderUser = this.users.find(u => String(u.id) === String(m.senderUserId));
+            fromName = senderUser ? (senderUser.displayName || senderUser.username) : "對方";
+          }
+          return {
+            id: m.id,
+            body: m.content,
+            senderUserId: m.senderUserId,
+            from: fromName,
+            createdAt: m.sentAt,
+            isRead: m.isRead !== undefined ? m.isRead : m.read
+          };
+        });
+        
+        // Clear unread dot for this room
+        const room = this.chatRooms.find(r => r.id === roomId);
+        if (room) {
+          room.hasUnread = false;
+        }
+
+        // Only dispatch global clear event if there are no other unread rooms
+        const hasAnyUnread = this.chatRooms.some(r => r.hasUnread);
+        if (!hasAnyUnread) {
+          window.dispatchEvent(new Event("riap-clear-unread"));
+        }
+
+        // Mark as read
+        await fetch(`${API_BASE}/read/${roomId}`, {
+          method: "PUT",
+          headers: { "Authorization": `Bearer ${this.user.id}` }
+        });
+      } catch (e) {
+        console.error("Failed to fetch history", e);
+      }
+    },
+
+    async sendMessage(text) {
+      if (!this.activeChatRoomId) return alert("請先選擇對話或房源");
+      
+      try {
+        await fetch(`${API_BASE}/sendMessage`, {
+          method: "POST",
+          headers: { 
+            "Authorization": `Bearer ${this.user.id}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            chatRoomId: this.activeChatRoomId,
+            content: text
+          })
+        });
+        
+        // Update local preview immediately
+        const room = this.chatRooms.find(r => r.id === this.activeChatRoomId);
+        if (room) room.preview = `我: ${text}`;
+
       } catch (e) {
         console.error(e);
         alert("傳送失敗，請稍後再試");
       }
     },
-
-    async onMessagesChanged(event) {
+    
+    handleWsMessage(event) {
       try {
-        if (event && event.detail) {
-          const msg = event.detail;
-          // do not surface sample messages to admins
-          if (this.user && this.user.role === "admin" && msg.sample) return;
-          if (!this.messages.find((m) => m.id === msg.id)) this.messages.push(msg);
-
-          // move or create the thread for this listing to the top
-          const idx = this.threads.findIndex((th) => th.id === msg.listingId);
-          if (idx >= 0) {
-            const existing = this.threads.splice(idx, 1)[0];
-            const updated = { ...existing, preview: msg.body, recentAt: msg.createdAt };
-            this.threads.unshift(updated);
+        const data = event.detail;
+        
+        if (data.connectionStatus) return; // ignore connection ack
+        
+        if (data.readBy) {
+          // Read receipt received from the other party
+          if (data.chatRoomId === this.activeChatRoomId && String(data.readBy) !== String(this.user.id)) {
+            this.messages.forEach(m => m.isRead = true);
+          }
+          return;
+        }
+        
+        // New message received
+        if (data.chatRoomId === this.activeChatRoomId) {
+          this.fetchHistory(this.activeChatRoomId);
+        } else {
+          // Notification for other room
+          const room = this.chatRooms.find(r => r.id === data.chatRoomId);
+          if (room) {
+            room.preview = "新訊息: " + data.content;
+            room.hasUnread = true;
           } else {
-            const listing = this.listings.find((l) => l.id === msg.listingId) || {};
-            this.threads.unshift({
-              id: listing.id || msg.listingId,
-              listingId: listing.id || msg.listingId,
-              title: listing.title || "租屋對話",
-              city: listing.city || "",
-              image: listingImage(listing || {}),
-              preview: msg.body,
-              recentAt: msg.createdAt,
-            });
+             this.fetchRooms();
           }
-
-          // keep only top 3 threads
-          if (this.threads.length > 3) this.threads.splice(3);
-
-          this.$nextTick(() => this.scrollToBottom());
-        } else {
-          const messages = await getMessages();
-          this.messages = this.user && this.user.role === "admin" ? messages.filter((m) => !m.sample) : messages;
-          this.updateThreadPreviews();
-          this.$nextTick(() => this.scrollToBottom());
         }
       } catch (e) {
-        console.error(e);
-      }
-    },
-
-    async onListingsChanged(event) {
-      try {
-        if (event && event.detail) {
-          const listing = event.detail;
-          if (!this.listings.find((l) => l.id === listing.id)) this.listings.unshift(listing);
-          if (!this.threads.find((t) => t.id === listing.id)) {
-            this.threads.unshift({
-              id: listing.id,
-              listingId: listing.id,
-              title: listing.title,
-              city: listing.city,
-              image: listingImage(listing),
-              preview: this.messages.filter((m) => m.listingId === listing.id).slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))[0]?.body || `${listing.city} · NT$ ${formatTwd(listing.rent)}`,
-            });
-          }
-        } else {
-          this.listings = await getListings();
-          this.threads = this.buildThreads(this.listings, this.messages);
-        }
-      } catch (e) {
-        console.error(e);
-      }
-    },
-
-    updateThreadPreviews() {
-      this.threads.forEach((thread) => {
-        const recent = this.messages.filter((m) => m.listingId === thread.id).slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))[0];
-        const listing = this.listings.find((l) => l.id === thread.id) || {};
-        thread.preview = recent?.body || `${thread.city || listing.city || ""} · NT$ ${formatTwd(listing.rent || 0)}`;
-      });
-    },
-
-    buildThreads(listingsArg, messagesArg) {
-      const msgs = messagesArg || this.messages || [];
-      const lst = listingsArg || this.listings || [];
-      const all = lst.map((listing) => {
-        const m = msgs.filter((mm) => mm.listingId === listing.id);
-        const recent = m.slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))[0];
-        return {
-          id: listing.id,
-          listingId: listing.id,
-          title: listing.title,
-          city: listing.city,
-          image: listingImage(listing),
-          preview: recent?.body || `${listing.city} · NT$ ${formatTwd(listing.rent)}`,
-          recentAt: recent?.createdAt || listing.postedAt || null,
-        };
-      });
-      all.sort((a,b) => new Date(b.recentAt || 0) - new Date(a.recentAt || 0));
-      return all.slice(0,3);
-    },
-
-    scrollToBottom() {
-      try {
-        const el = this.$refs.chatStream;
-        if (!el) return;
-        el.scrollTop = el.scrollHeight;
-      } catch (e) {
-        // ignore
+        console.error("WS message error", e);
       }
     },
   },
   watch: {
-    activeThreadId() {
-      this.$nextTick(() => this.scrollToBottom());
+    activeChatRoomId(newId) {
+      if (newId) {
+        this.fetchHistory(newId);
+      }
     },
   },
 };
@@ -341,7 +362,6 @@ export default {
 
 .messages-hero > div,
 .conversation-card,
-.thread-list,
 .chat-panel {
   border-radius: 28px;
   background: var(--card);
@@ -355,8 +375,7 @@ export default {
   color: #fff;
 }
 
-.eyebrow,
-.section-title {
+.eyebrow {
   display: inline-flex;
   width: fit-content;
   padding: 7px 12px;
@@ -406,52 +425,8 @@ export default {
   grid-template-columns: 320px minmax(0, 1fr);
 }
 
-.thread-list,
 .chat-panel {
   padding: 18px;
-}
-
-.thread-list {
-  display: grid;
-  gap: 12px;
-  align-content: start;
-}
-
-.thread-item {
-  display: grid;
-  grid-template-columns: 72px minmax(0, 1fr);
-  gap: 12px;
-  padding: 12px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.74);
-  border: 1px solid rgba(17, 24, 39, 0.06);
-  cursor: pointer;
-}
-
-.thread-item.active {
-  border-color: rgba(180, 95, 52, 0.35);
-  background: rgba(180, 95, 52, 0.08);
-}
-
-.thread-item img {
-  width: 72px;
-  height: 72px;
-  border-radius: 16px;
-  object-fit: cover;
-}
-
-.thread-item strong,
-.thread-item p {
-  display: block;
-  margin: 0;
-}
-
-.thread-item p {
-  color: var(--muted);
-  margin-top: 4px;
-}
-
-.chat-panel {
   display: grid;
   gap: 16px;
 }
@@ -477,89 +452,28 @@ export default {
   color: var(--secondary);
 }
 
-.chat-stream {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  max-height: 520px;
-  overflow: auto;
-  padding-right: 4px;
-}
-
-.bubble {
-  max-width: 82%;
-  padding: 14px 16px;
-  border-radius: 20px;
-  border: 1px solid rgba(17, 24, 39, 0.08);
-}
-
-.bubble.inbound {
-  align-self: flex-start;
-  background: rgba(255, 255, 255, 0.86);
-}
-
-.bubble.outbound {
-  align-self: flex-end;
-  background: linear-gradient(135deg, rgba(180, 95, 52, 0.16), rgba(242, 215, 191, 0.42));
-}
-
-.bubble__meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  color: var(--muted);
-  font-size: 0.88rem;
-}
-
-.bubble p {
-  margin: 10px 0 0;
-  line-height: 1.8;
-}
-
-.composer {
+.chat-panel--empty {
   display: grid;
-  gap: 12px;
-  padding-top: 8px;
+  place-items: center;
+  min-height: 400px;
 }
 
-.composer textarea {
-  min-height: 140px;
-  resize: vertical;
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  padding: 16px;
-  background: rgba(255, 255, 255, 0.84);
-}
-
-.composer__actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+.empty-selection {
+  text-align: center;
   color: var(--muted);
 }
 
-.primary-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  border-radius: 16px;
-  padding: 14px 16px;
-  background: linear-gradient(135deg, var(--primary), #d78145);
-  color: #fff;
-  font-weight: 700;
+.empty-selection .empty-icon {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: 16px;
+  opacity: 0.6;
 }
 
 @media (max-width: 980px) {
   .messages-hero,
   .messages-layout {
     grid-template-columns: 1fr;
-  }
-
-  .bubble {
-    max-width: 100%;
   }
 }
 </style>

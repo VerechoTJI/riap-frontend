@@ -57,9 +57,9 @@
             <span class="eyebrow">聯繫房東</span>
             <h3>{{ listing.landlord }}</h3>
             <p>從這個細節頁可直接前往訊息頁，延續這筆房源的詢問流程。</p>
-            <router-link class="primary-button" :to="{ path: '/messages', query: { listing: listing.id } }">
+            <button class="primary-button" @click="contactLandlord">
               立即詢問
-            </router-link>
+            </button>
           </div>
 
           <div class="section-card note-card">
@@ -119,6 +119,28 @@ export default {
     listingImage,
     statusLabel,
     statusTone,
+    async contactLandlord() {
+      const user = JSON.parse(localStorage.getItem("riap_user") || "null");
+      if (!user) {
+        this.$router.push('/login?redirect=/listing/' + this.listing.id);
+        return;
+      }
+      try {
+        const res = await fetch("http://localhost:8080/api/chat/createChatRoom", {
+          method: "POST",
+          headers: { 
+            "Authorization": "Bearer " + user.id,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ listingId: String(this.listing.id) })
+        });
+        const room = await res.json();
+        this.$router.push("/messages?roomId=" + room.chatroomId);
+      } catch (e) {
+        console.error("Failed to create chat room", e);
+        alert("建立聊天室失敗");
+      }
+    }
   },
 };
 </script>

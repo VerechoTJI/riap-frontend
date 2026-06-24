@@ -14,7 +14,10 @@
 
       <nav class="nav-links">
         <router-link to="/">房源</router-link>
-        <router-link v-if="user" to="/messages">訊息</router-link>
+        <router-link v-if="user" to="/messages">
+          訊息
+          <span v-if="hasUnread" class="global-unread-dot"></span>
+        </router-link>
         <router-link v-if="user?.role === 'landlord'" to="/landlord">房東</router-link>
         <router-link v-if="user?.role === 'admin'" to="/admin">審核</router-link>
       </nav>
@@ -48,6 +51,7 @@ export default {
   data() {
     return {
       user: readCurrentUser(),
+      hasUnread: false,
     };
   },
   computed: {
@@ -55,22 +59,79 @@ export default {
       return roleLabel(this.user?.role);
     },
   },
+  created() {
+    this.ws = null;
+  },
   mounted() {
     window.addEventListener("storage", this.syncUser);
     window.addEventListener("riap-user-changed", this.syncUser);
+    window.addEventListener("riap-clear-unread", this.clearUnread);
+    this.connectWebSocket();
   },
   beforeUnmount() {
     window.removeEventListener("storage", this.syncUser);
     window.removeEventListener("riap-user-changed", this.syncUser);
+    window.removeEventListener("riap-clear-unread", this.clearUnread);
+    this.closeWebSocket();
   },
   methods: {
     initials,
     syncUser() {
-      this.user = readCurrentUser();
+      const newUser = readCurrentUser();
+      if (!this.user && newUser) {
+        this.user = newUser;
+        this.connectWebSocket();
+      } else if (this.user && !newUser) {
+        this.user = null;
+        this.closeWebSocket();
+      } else {
+        this.user = newUser;
+      }
+    },
+    connectWebSocket() {
+      if (!this.user) return;
+      
+      fetch(`http://localhost:8080/api/chat/hasUnread`, {
+        headers: { 'Authorization': `Bearer ${this.user.token}` }
+      })
+      .then(res => {
+        if(res.ok) return res.json();
+        throw new Error();
+      })
+      .then(hasUnread => {
+        this.hasUnread = hasUnread;
+      })
+      .catch(err => console.error("Failed to fetch unread status", err));
+
+      this.closeWebSocket();
+      this.ws = new WebSocket(`ws://localhost:8080/ws/chat/connect?token=${this.user.id}`);
+      this.ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.connectionStatus) return; // ignore ack
+          if (!data.readBy) {
+            this.hasUnread = true;
+          }
+          window.dispatchEvent(new CustomEvent("riap-ws-message", { detail: data }));
+        } catch (e) {
+          console.error("App WS error", e);
+        }
+      };
+    },
+    closeWebSocket() {
+      if (this.ws) {
+        this.ws.close();
+        this.ws = null;
+      }
+    },
+    clearUnread() {
+      this.hasUnread = false;
     },
     logout() {
       clearCurrentUser();
       this.user = null;
+      this.closeWebSocket();
+      this.hasUnread = false;
       this.$router.push("/");
     },
   },
@@ -291,6 +352,16 @@ textarea {
 .fade-leave-to {
   opacity: 0;
   transform: translateY(8px);
+}
+
+.global-unread-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background-color: #ef4444;
+  border-radius: 50%;
+  margin-left: 4px;
+  vertical-align: middle;
 }
 
 @media (max-width: 900px) {
