@@ -146,9 +146,6 @@ export default {
     this.user = readCurrentUser();
     if (!this.user) return;
     try {
-      // Clear global unread dot as soon as we enter the page
-      window.dispatchEvent(new Event("riap-clear-unread"));
-
       this.listings = await getListings();
       this.users = await getUsers();
       await this.fetchRooms();
@@ -194,7 +191,7 @@ export default {
             city: listing.city || "",
             image: listingImage(listing),
             preview: "點擊查看對話",
-            hasUnread: false
+            hasUnread: room.hasUnread || false
           };
         });
       } catch (e) {
@@ -229,12 +226,17 @@ export default {
           };
         });
         
-        // Clear unread dot
+        // Clear unread dot for this room
         const room = this.chatRooms.find(r => r.id === roomId);
-        if (room) room.hasUnread = false;
+        if (room) {
+          room.hasUnread = false;
+        }
 
-        // Dispatch global clear event
-        window.dispatchEvent(new Event("riap-clear-unread"));
+        // Only dispatch global clear event if there are no other unread rooms
+        const hasAnyUnread = this.chatRooms.some(r => r.hasUnread);
+        if (!hasAnyUnread) {
+          window.dispatchEvent(new Event("riap-clear-unread"));
+        }
 
         // Mark as read
         await fetch(`${API_BASE}/read/${roomId}`, {

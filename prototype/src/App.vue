@@ -90,6 +90,19 @@ export default {
     },
     connectWebSocket() {
       if (!this.user) return;
+      
+      fetch(`http://localhost:8080/api/chat/hasUnread`, {
+        headers: { 'Authorization': `Bearer ${this.user.token}` }
+      })
+      .then(res => {
+        if(res.ok) return res.json();
+        throw new Error();
+      })
+      .then(hasUnread => {
+        this.hasUnread = hasUnread;
+      })
+      .catch(err => console.error("Failed to fetch unread status", err));
+
       this.closeWebSocket();
       this.ws = new WebSocket(`ws://localhost:8080/ws/chat/connect?token=${this.user.id}`);
       this.ws.onmessage = (event) => {

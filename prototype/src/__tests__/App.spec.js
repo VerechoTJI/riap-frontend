@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mount } from "@vue/test-utils";
+import { mount, flushPromises } from "@vue/test-utils";
 import App from "../App.vue";
 import * as uiLib from "../lib/ui";
 
@@ -117,11 +117,29 @@ describe("App.vue Global WebSocket Notification", () => {
     const wrapper = mount(App, {
       global: { 
         mocks: { $router: mockRouter },
-        stubs: { 'router-link': true, 'router-view': true }
+        stubs: { 'router-link': { template: '<a><slot/></a>' }, 'router-view': true }
       }
     });
 
     await wrapper.vm.logout();
     expect(mockWebSocketInstance.close).toHaveBeenCalled();
+  });
+
+  it("should fetch initial unread status on mount", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(true)
+    });
+
+    const wrapper = mount(App, {
+      global: { 
+        mocks: { $router: mockRouter },
+        stubs: { 'router-link': { template: '<a><slot/></a>' }, 'router-view': true }
+      }
+    });
+
+    await flushPromises();
+    expect(global.fetch).toHaveBeenCalledWith("http://localhost:8080/api/chat/hasUnread", expect.any(Object));
+    expect(wrapper.find(".global-unread-dot").exists()).toBe(true);
   });
 });
