@@ -6,7 +6,7 @@
       <h1>新增房源</h1>
 
       <label class="field">
-        <span>標題</span>
+        <span>標題 <span class="required">*</span></span>
         <input v-model="form.title" placeholder="例如：近捷運高質感套房" />
       </label>
 
@@ -32,22 +32,22 @@
       </label>
 
       <label class="field">
-        <span>月租 (NT$)</span>
+        <span>月租 (NT$) <span class="required">*</span></span>
         <input type="number" v-model.number="form.rent" />
       </label>
 
       <label class="field">
-        <span>押金 (NT$)</span>
+        <span>押金 (NT$) <span class="required">*</span></span>
         <input type="number" v-model.number="form.deposit" />
       </label>
 
       <label class="field">
-        <span>管理費 (NT$)</span>
+        <span>管理費 (NT$) <span class="required">*</span></span>
         <input type="number" v-model.number="form.managementFee" />
       </label>
 
       <label class="field">
-        <span>水電費計算基準</span>
+        <span>水電費計算基準 <span class="required">*</span></span>
         <input v-model="form.waterElectricityRules" placeholder="例如：台水台電、一度5元" />
       </label>
 
@@ -134,9 +134,17 @@ export default {
         title: this.form.title,
         description: this.form.description,
         area: Number(this.form.size),
+        size: Number(this.form.size),
+        city: this.form.city,
+        address: this.form.address,
+        layout: this.form.layout,
         floor: Number(this.form.floor),
+        availableFrom: this.form.availableFrom,
+        image: this.form.image || undefined,
+        features: (this.form.featuresText || "").split(/\s*,\s*/).map(s => s.trim()).filter(Boolean),
         propertyType: this.form.propertyType,
-        landlordId: current.id, // Assuming UUID from UAS
+        landlordId: current.id,
+        landlord: current.displayName || current.username,
         feeDisclosure: {
           rent: this.form.rent,
           deposit: this.form.deposit,
@@ -170,7 +178,8 @@ export default {
   border: 1px solid rgba(255,255,255,0.6);
 }
 .field { display: block; margin: 10px 0; }
-.field span { display: block; font-weight: 600; margin-bottom: 6px; }
+.field > span { display: block; font-weight: 600; margin-bottom: 6px; }
+.required { color: #e05c5c; margin-left: 4px; display: inline; }
 .field input, .field textarea { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.08); }
 .action-row { display:flex; gap:12px; margin-top:12px; }
 </style>
