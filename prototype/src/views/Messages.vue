@@ -146,6 +146,9 @@ export default {
     this.user = readCurrentUser();
     if (!this.user) return;
     try {
+      // Clear global unread dot as soon as we enter the page
+      window.dispatchEvent(new Event("riap-clear-unread"));
+
       this.listings = await getListings();
       this.users = await getUsers();
       await this.fetchRooms();
