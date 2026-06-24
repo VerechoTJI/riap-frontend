@@ -80,8 +80,8 @@ export default {
       password: "",
       role: "tenant",
       demoUsers: [
-        { id: "tenant", username: "tenant", displayName: "Test Tenant", role: "tenant" },
-        { id: "landlord", username: "landlord", displayName: "Test Landlord", role: "landlord" },
+        { id: "alice", username: "alice", displayName: "Alice Chen", role: "tenant" },
+        { id: "bob", username: "bob", displayName: "Bob Wang", role: "landlord" },
         { id: "admin", username: "admin", displayName: "Test Admin", role: "admin" }
       ],
     };
