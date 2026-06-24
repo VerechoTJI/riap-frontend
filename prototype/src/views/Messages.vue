@@ -112,23 +112,11 @@ export default {
       return this.chatRooms.find((room) => room.id === this.activeChatRoomId) || null;
     },
     currentChatRoom() {
-      const listing = this.listings.find((item) => String(item.id) === String(this.activeRoom?.listingId)) || this.listings[0] || {};
-      const user = this.user || { displayName: null, username: null, role: null };
-
-      let fromName = user.displayName || user.username || "我";
-      let toName = "對方";
-      if (this.activeRoom) {
-         const otherUserId = user.role === "landlord" ? this.activeRoom.tenantId : this.activeRoom.landlordId;
-         const otherUser = this.users.find(u => String(u.id) === String(otherUserId));
-         if (otherUser) {
-             toName = otherUser.displayName || otherUser.username;
-         }
-      }
-
+      const user = this.user || { displayName: null, username: null };
       return {
-        title: listing.title || "租屋對話",
+        title: this.activeRoom?.title || "租屋對話",
         from: user.displayName || user.username || "我",
-        to: listing.landlord || "房東",
+        to: this.activeRoom?.otherUserName || "對方",
         statusLabel: "目前詢問",
       };
     },
