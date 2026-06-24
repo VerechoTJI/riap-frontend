@@ -175,7 +175,7 @@ describe('RCS Integration Tests (Black-box with Real API)', () => {
     const card = wrapper.find('.conversation-card')
     expect(card.exists()).toBe(true)
     // Check basic data exists
-    expect(card.text()).toContain('Test Room') // from mock listings
+    expect(card.text()).toContain('套房') // from real backend DemoDataInitializer
     
     wrapper.unmount()
   })

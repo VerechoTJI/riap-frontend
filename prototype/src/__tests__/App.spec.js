@@ -24,7 +24,7 @@ describe("App.vue Global WebSocket Notification", () => {
       send: vi.fn(),
     };
     originalWebSocket = global.WebSocket;
-    global.WebSocket = vi.fn(() => mockWebSocketInstance);
+    global.WebSocket = vi.fn(function() { return mockWebSocketInstance; });
 
     // Spy on window.dispatchEvent
     dispatchEventSpy = vi.spyOn(window, "dispatchEvent");
