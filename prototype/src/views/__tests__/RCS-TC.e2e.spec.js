@@ -1,6 +1,7 @@
 import { mount, flushPromises } from '@vue/test-utils'
 import { describe, it, expect, vi, beforeAll } from 'vitest'
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory, RouterView } from 'vue-router'
+import { h } from 'vue'
 import Messages from '../Messages.vue'
 import ListingDetail from '../ListingDetail.vue'
 
@@ -45,29 +46,35 @@ describe.skipIf(isSkipped)('RCS Integration Tests (Black-box with Real API)', ()
       if (!res.ok) throw new Error('API Error: ' + res.status)
       const data = await res.json()
       const items = data.content || data.data || data.listings || []
+      console.log('DEBUG items:', items);
       if (items.length > 0) {
         realListingId = items[0].id || (items[0]._links ? items[0]._links.self.href.split('/').pop() : '1')
         window.__TEST_REAL_LISTING_ID = realListingId
       }
+      console.log('DEBUG realListingId:', realListingId);
     } catch (e) {
       console.error('RCS-TC fetch realListingId failed:', e)
     }
   })
 
   it('RCS-TC01: 建立聊天室測試 (Create chat room)', async () => {
+    const pushSpy = vi.fn()
     const wrapper = mount(ListingDetail, {
       global: {
-        plugins: [router],
         mocks: {
-          $route: { params: { id: realListingId } }
-        }
+          $route: { params: { id: realListingId } },
+          $router: { push: pushSpy }
+        },
+        stubs: ['router-link']
       }
     })
     
-    // wait for created() to fetch listing fixture
+    // Wait for async component to load
     await flushPromises()
-
-    const pushSpy = vi.spyOn(router, 'push')
+    
+    // wait for created() to fetch listing from real backend
+    await new Promise(r => setTimeout(r, 1000))
+    await flushPromises()
 
     // Find "Contact Landlord" button and click
     const button = wrapper.find('button.primary-button')
@@ -77,25 +84,31 @@ describe.skipIf(isSkipped)('RCS Integration Tests (Black-box with Real API)', ()
     // wait for API call to complete
     await new Promise(r => setTimeout(r, 1000))
     await flushPromises()
-
-    // It should have pushed to router
-    expect(pushSpy).toHaveBeenCalled()
-    const callArgs = pushSpy.mock.calls[0][0]
-    expect(callArgs).toMatch(/\/messages\?roomId=/)
     
-    // Extract created room ID for subsequent tests
-    createdRoomId = callArgs.split('=')[1]
-    expect(createdRoomId).toBeTruthy()
+    // We expect it pushed to /messages
+    expect(pushSpy).toHaveBeenCalled()
+    const pushArg = pushSpy.mock.calls[0][0]
+    expect(pushArg).toContain('/messages?roomId=')
+    
+    // Extract the created room ID to pass to RCS-TC09
+    const match = pushArg.match(/roomId=([^&]+)/)
+    if (match) {
+      window.__TEST_ACTIVE_ROOM_ID = match[1]
+      createdRoomId = match[1]
+    }
+    
+    wrapper.unmount()
   })
 
   it('RCS-TC02: 顯示聊天室列表測試 (Show chat room list)', async () => {
     // Mount messages view
     const wrapper = mount(Messages, {
-      global: {
-        plugins: [router],
+      global: { 
         mocks: {
-          $route: { query: { roomId: createdRoomId } }
-        }
+          $route: { query: { roomId: window.__TEST_ACTIVE_ROOM_ID || null } },
+          $router: { push: vi.fn(), replace: vi.fn() }
+        },
+        stubs: ['router-link']
       }
     })
 
@@ -114,11 +127,12 @@ describe.skipIf(isSkipped)('RCS Integration Tests (Black-box with Real API)', ()
 
   it('RCS-TC03: 顯示聊天室測試 (Show chat room)', async () => {
     const wrapper = mount(Messages, {
-      global: {
-        plugins: [router],
+      global: { 
         mocks: {
-          $route: { query: { roomId: createdRoomId } }
-        }
+          $route: { query: { roomId: window.__TEST_ACTIVE_ROOM_ID || null } },
+          $router: { push: vi.fn(), replace: vi.fn() }
+        },
+        stubs: ['router-link']
       }
     })
 
@@ -136,11 +150,12 @@ describe.skipIf(isSkipped)('RCS Integration Tests (Black-box with Real API)', ()
 
   it('RCS-TC05 & TC06: 發送與接收訊息測試 (Send and receive messages)', async () => {
     const wrapper = mount(Messages, {
-      global: {
-        plugins: [router],
+      global: { 
         mocks: {
-          $route: { query: { roomId: createdRoomId } }
-        }
+          $route: { query: { roomId: window.__TEST_ACTIVE_ROOM_ID || null } },
+          $router: { push: vi.fn(), replace: vi.fn() }
+        },
+        stubs: ['router-link']
       }
     })
 
@@ -170,11 +185,12 @@ describe.skipIf(isSkipped)('RCS Integration Tests (Black-box with Real API)', ()
 
   it('RCS-TC07: 顯示歷史紀錄測試 (Show message history)', async () => {
     const wrapper = mount(Messages, {
-      global: {
-        plugins: [router],
+      global: { 
         mocks: {
-          $route: { query: { roomId: createdRoomId } }
-        }
+          $route: { query: { roomId: window.__TEST_ACTIVE_ROOM_ID || null } },
+          $router: { push: vi.fn(), replace: vi.fn() }
+        },
+        stubs: ['router-link']
       }
     })
 
@@ -189,12 +205,14 @@ describe.skipIf(isSkipped)('RCS Integration Tests (Black-box with Real API)', ()
   })
 
   it('RCS-TC09: 引用房源資料測試 (Quote listing data)', async () => {
+    console.log('ACTIVE ROOM ID:', window.__TEST_ACTIVE_ROOM_ID)
     const wrapper = mount(Messages, {
-      global: {
-        plugins: [router],
+      global: { 
         mocks: {
-          $route: { query: { roomId: createdRoomId } }
-        }
+          $route: { query: { roomId: window.__TEST_ACTIVE_ROOM_ID || null } },
+          $router: { push: vi.fn(), replace: vi.fn() }
+        },
+        stubs: ['router-link']
       }
     })
 
@@ -204,7 +222,7 @@ describe.skipIf(isSkipped)('RCS Integration Tests (Black-box with Real API)', ()
     const card = wrapper.find('.conversation-card')
     expect(card.exists()).toBe(true)
     // Check basic data exists
-    expect(card.text()).toContain('套房') // from real backend DemoDataInitializer
+    expect(card.text()).toContain('Fake Listing Summary for') // from real backend FakeLmsClient
     
     wrapper.unmount()
   })

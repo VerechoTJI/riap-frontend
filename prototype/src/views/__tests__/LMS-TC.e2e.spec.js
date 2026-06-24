@@ -1,6 +1,7 @@
 import { mount, flushPromises } from '@vue/test-utils'
 import { describe, it, expect, beforeAll, vi } from 'vitest'
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory, RouterView } from 'vue-router'
+import { h } from 'vue'
 import NewListing from '../NewListing.vue'
 import LandlordDashboard from '../LandlordDashboard.vue'
 import AdminReview from '../AdminReview.vue'
@@ -132,11 +133,15 @@ describe.skipIf(isSkipped)('LMS Integration Tests (Direct E2E)', () => {
     // Requires an existing returned listing. In E2E we just mount the component.
     localStorage.setItem('riap_user', JSON.stringify({ id: '2', username: 'landlord_a', role: 'landlord' }))
     
-    // We assume ID 1 exists. The component will try to fetch it.
+    // Click edit
+    const pushSpy = vi.fn()
     const wrapper = mount(EditListing, {
       global: { 
-        plugins: [router],
-        mocks: { $route: { params: { id: '1' } } }
+        mocks: {
+          $route: { params: { id: '1' } },
+          $router: { push: pushSpy }
+        },
+        stubs: ['router-link']
       }
     })
 
