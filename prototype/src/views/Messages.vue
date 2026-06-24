@@ -155,16 +155,14 @@ export default {
         await this.fetchHistory(this.activeChatRoomId);
       }
       
-      this.connectWebSocket();
+      window.addEventListener("riap-ws-message", this.handleWsMessage);
     } catch (error) {
       console.error("Initialization error:", error);
     }
   },
 
   beforeUnmount() {
-    if (this.ws) {
-      this.ws.close();
-    }
+    window.removeEventListener("riap-ws-message", this.handleWsMessage);
   },
   methods: {
     selectRoom(roomId) {
@@ -232,6 +230,9 @@ export default {
         const room = this.chatRooms.find(r => r.id === roomId);
         if (room) room.hasUnread = false;
 
+        // Dispatch global clear event
+        window.dispatchEvent(new Event("riap-clear-unread"));
+
         // Mark as read
         await fetch(`${API_BASE}/read/${roomId}`, {
           method: "PUT",
@@ -268,39 +269,36 @@ export default {
       }
     },
     
-    connectWebSocket() {
-      this.ws = new WebSocket(`${WS_BASE}?token=${this.user.id}`);
-      this.ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          
-          if (data.connectionStatus) return; // ignore connection ack
-          
-          if (data.readBy) {
-            // Read receipt received from the other party
-            if (data.chatRoomId === this.activeChatRoomId && String(data.readBy) !== String(this.user.id)) {
-              this.messages.forEach(m => m.isRead = true);
-            }
-            return;
+    handleWsMessage(event) {
+      try {
+        const data = event.detail;
+        
+        if (data.connectionStatus) return; // ignore connection ack
+        
+        if (data.readBy) {
+          // Read receipt received from the other party
+          if (data.chatRoomId === this.activeChatRoomId && String(data.readBy) !== String(this.user.id)) {
+            this.messages.forEach(m => m.isRead = true);
           }
-          
-          // New message received
-          if (data.chatRoomId === this.activeChatRoomId) {
-            this.fetchHistory(this.activeChatRoomId);
-          } else {
-            // Notification for other room
-            const room = this.chatRooms.find(r => r.id === data.chatRoomId);
-            if (room) {
-              room.preview = "新訊息: " + data.content;
-              room.hasUnread = true;
-            } else {
-               this.fetchRooms();
-            }
-          }
-        } catch (e) {
-          console.error("WS message error", e);
+          return;
         }
-      };
+        
+        // New message received
+        if (data.chatRoomId === this.activeChatRoomId) {
+          this.fetchHistory(this.activeChatRoomId);
+        } else {
+          // Notification for other room
+          const room = this.chatRooms.find(r => r.id === data.chatRoomId);
+          if (room) {
+            room.preview = "新訊息: " + data.content;
+            room.hasUnread = true;
+          } else {
+             this.fetchRooms();
+          }
+        }
+      } catch (e) {
+        console.error("WS message error", e);
+      }
     },
   },
   watch: {
