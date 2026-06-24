@@ -40,3 +40,11 @@ export async function searchListings(params = {}) {
   const data = await res.json();
   return (data.listings || []).map(normalize);
 }
+
+export async function getListingById(id) {
+  const url = new URL(`/api/listings/${id}`, window.location.origin);
+  const res = await fetch(url.toString());
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  const data = await res.json();
+  return normalize(data);
+}

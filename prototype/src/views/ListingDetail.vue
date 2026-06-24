@@ -79,7 +79,7 @@
 </template>
 
 <script>
-import { getListings } from "../lib/fixtures";
+import { getListingById } from "../lib/api";
 import { formatTwd, handleListingImageError, listingImage, statusLabel, statusTone } from "../lib/ui";
 
 export default {
@@ -105,9 +105,8 @@ export default {
   },
   async created() {
     try {
-      const id = Number(this.$route.params.id);
-      const all = await getListings();
-      this.listing = all.find((item) => item.id === id) || null;
+      const id = String(this.$route.params.id);
+      this.listing = await getListingById(id);
     } catch (error) {
       console.error(error);
       this.listing = null;
