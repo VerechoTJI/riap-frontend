@@ -39,7 +39,13 @@ describe.skipIf(isSkipped)('RCS Integration Tests (Black-box with Real API)', ()
     
     // We assume the backend is running on http://localhost:8080
     // and tenant1 is our test user.
-    localStorage.setItem('riap_user', JSON.stringify({ id: 'tenant1', username: 'Test Tenant', role: 'tenant' }))
+    const loginRes = await fetch('http://localhost:8080/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ account: 'tenant', password: 'password' })
+    });
+    const loginData = await loginRes.json();
+    localStorage.setItem('riap_user', JSON.stringify({ id: loginData.userId, username: 'tenant', role: 'tenant', token: loginData.token }))
 
     try {
       const res = await fetch('/api/listings?size=1')

@@ -1,3 +1,5 @@
+import { getAuthHeaders } from './auth';
+
 const STATUS_MAP = {
   AVAILABLE: "published",
   PENDING: "pending",
@@ -35,7 +37,7 @@ export async function searchListings(params = {}) {
   if (params.size != null)                        url.searchParams.set("size", params.size);
   if (params.sort)                                url.searchParams.set("sort", params.sort);
 
-  const res = await fetch(url.toString());
+  const res = await fetch(url.toString(), { headers: getAuthHeaders() });
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   const data = await res.json();
   return (data.listings || []).map(normalize);
@@ -43,7 +45,7 @@ export async function searchListings(params = {}) {
 
 export async function getListingById(id) {
   const url = new URL(`/api/listings/${id}`, window.location.origin);
-  const res = await fetch(url.toString());
+  const res = await fetch(url.toString(), { headers: getAuthHeaders() });
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   const data = await res.json();
   return normalize(data);

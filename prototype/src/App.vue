@@ -104,7 +104,7 @@ export default {
       .catch(err => console.error("Failed to fetch unread status", err));
 
       this.closeWebSocket();
-      this.ws = new WebSocket(`ws://localhost:8080/ws/chat/connect?token=${this.user.id}`);
+      this.ws = new WebSocket(`ws://localhost:8080/ws/chat/connect?token=${this.user.token}`);
       this.ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);

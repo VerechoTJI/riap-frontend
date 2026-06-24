@@ -1,11 +1,13 @@
 import * as fixtures from "./fixtures";
+import { getAuthHeaders } from "./auth";
 
 const API_BASE_URL = '/api/listings';
 
 // Helper to check if backend is reachable
 async function tryFetch(url, options = {}) {
   try {
-    const response = await fetch(url, options);
+    const headers = { ...options.headers, ...getAuthHeaders() };
+    const response = await fetch(url, { ...options, headers });
     if (!response.ok) {
         // If it's a 404 or other error, we might still want to fallback if it's the backend being missing
         return { ok: false, status: response.status };

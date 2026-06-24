@@ -133,7 +133,7 @@ export default {
         const res = await fetch("http://localhost:8080/api/chat/createChatRoom", {
           method: "POST",
           headers: { 
-            "Authorization": "Bearer " + user.id,
+            "Authorization": "Bearer " + user.token,
             "Content-Type": "application/json"
           },
           body: JSON.stringify({ listingId: String(this.listing.id) })

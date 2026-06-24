@@ -16,7 +16,7 @@ describe("App.vue Global WebSocket Notification", () => {
 
   beforeEach(() => {
     // Mock user login
-    vi.spyOn(uiLib, "readCurrentUser").mockReturnValue({ id: "tenant-1", displayName: "Tenant 1" });
+    vi.spyOn(uiLib, "readCurrentUser").mockReturnValue({ id: "tenant-1", displayName: "Tenant 1", token: "tenant-1" });
 
     // Mock WebSocket
     mockWebSocketInstance = {

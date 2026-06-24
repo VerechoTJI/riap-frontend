@@ -29,8 +29,14 @@ describe.skipIf(isSkipped)('LMS Integration Tests (Direct E2E)', () => {
   })
 
   it('LMS-TC01: 驗證房源刊登與強制費用揭露功能 (New Listing)', async () => {
-    // Set landlord identity
-    localStorage.setItem('riap_user', JSON.stringify({ id: '2', username: 'landlord_a', role: 'landlord' }))
+    // Login and get real token
+    const res = await fetch('http://localhost:8080/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ account: 'landlord', password: 'password' })
+    });
+    const data = await res.json();
+    localStorage.setItem('riap_user', JSON.stringify({ id: data.userId, username: 'landlord', role: 'landlord', token: data.token }))
     const wrapper = mount(NewListing, { global: { plugins: [router] } })
     
     // Fill required fields
@@ -74,7 +80,13 @@ describe.skipIf(isSkipped)('LMS Integration Tests (Direct E2E)', () => {
   }, 10000)
 
   it('LMS-TC02: 驗證房源審核與退回機制 (Admin Review)', async () => {
-    localStorage.setItem('riap_user', JSON.stringify({ id: '3', username: 'admin_a', role: 'admin' }))
+    const res = await fetch('http://localhost:8080/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ account: 'admin', password: 'password' })
+    });
+    const data = await res.json();
+    localStorage.setItem('riap_user', JSON.stringify({ id: data.userId, username: 'admin', role: 'admin', token: data.token }))
     const wrapper = mount(AdminReview, { global: { plugins: [router] } })
     
     await flushPromises()
@@ -100,7 +112,13 @@ describe.skipIf(isSkipped)('LMS Integration Tests (Direct E2E)', () => {
   }, 10000)
 
   it('LMS-TC03 & LMS-TC05: 驗證一鍵下架與狀態同步功能 (Landlord Dashboard)', async () => {
-    localStorage.setItem('riap_user', JSON.stringify({ id: '2', username: 'landlord_a', role: 'landlord' }))
+    const res = await fetch('http://localhost:8080/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ account: 'landlord', password: 'password' })
+    });
+    const data = await res.json();
+    localStorage.setItem('riap_user', JSON.stringify({ id: data.userId, username: 'landlord', role: 'landlord', token: data.token }))
     const wrapper = mount(LandlordDashboard, { global: { plugins: [router] } })
 
     await flushPromises()
@@ -131,7 +149,13 @@ describe.skipIf(isSkipped)('LMS Integration Tests (Direct E2E)', () => {
 
   it('LMS-TC04: 驗證房源重新送審功能 (Edit Listing)', async () => {
     // Requires an existing returned listing. In E2E we just mount the component.
-    localStorage.setItem('riap_user', JSON.stringify({ id: '2', username: 'landlord_a', role: 'landlord' }))
+    const res = await fetch('http://localhost:8080/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ account: 'landlord', password: 'password' })
+    });
+    const data = await res.json();
+    localStorage.setItem('riap_user', JSON.stringify({ id: data.userId, username: 'landlord', role: 'landlord', token: data.token }))
     
     // Click edit
     const pushSpy = vi.fn()

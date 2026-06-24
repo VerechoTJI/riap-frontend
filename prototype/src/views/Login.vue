@@ -79,65 +79,85 @@ export default {
       username: "",
       password: "",
       role: "tenant",
-      demoUsers: [],
+      demoUsers: [
+        { id: "tenant", username: "tenant", displayName: "Test Tenant", role: "tenant" },
+        { id: "landlord", username: "landlord", displayName: "Test Landlord", role: "landlord" },
+        { id: "admin", username: "admin", displayName: "Test Admin", role: "admin" }
+      ],
     };
   },
   async created() {
-    try {
-      this.demoUsers = (await getUsers()).map((user) => ({
-        ...user,
-        displayName: user.displayName || user.username,
-      }));
-    } catch (error) {
-      console.error(error);
-    }
+    // skip fixture loading
   },
   methods: {
     roleLabel,
     async login() {
       const name = (this.username || "").trim();
       if (!name) return alert("請輸入帳號或 Email");
+      if (!this.password) return alert("請輸入密碼以登入或註冊");
+
       try {
-        const users = await getUsers();
-        const found = users.find((u) => u.username === name || u.email === name);
+        // Try to login first
+        const loginRes = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ account: name, password: this.password })
+        });
 
-        if (found) {
-          // existing user: if passwordHash present, validate
-          if (found.passwordHash) {
-            if (!this.password) return alert("請輸入密碼以登入");
-            const h = await hashPassword(this.password);
-            if (h !== found.passwordHash) return alert("密碼錯誤");
+        if (loginRes.ok) {
+          const data = await loginRes.json();
+          if (data.success) {
+            writeCurrentUser({
+              id: data.userId,
+              username: name,
+              displayName: name,
+              role: data.role?.toLowerCase() || 'tenant',
+              token: data.token
+            });
+            this.$router.push(this.$route.query.redirect || "/");
+            return;
           }
-          writeCurrentUser(found);
-          this.$router.push(this.$route.query.redirect || "/");
-          return;
         }
 
-        // new registration requires password
-        if (!this.password) return alert("註冊需設定密碼");
-        const passwordHash = await hashPassword(this.password);
-        const newUser = {
-          username: name,
-          displayName: name,
-          role: this.role,
-          passwordHash,
-        };
-        try {
-          const created = await addUser(newUser);
-          writeCurrentUser(created);
-          this.$router.push(this.$route.query.redirect || "/");
-        } catch (e) {
-          console.error(e);
-          alert('註冊失敗');
+        // If login failed, try to register
+        const regRes = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ account: name, password: this.password, role: this.role.toUpperCase() })
+        });
+
+        if (regRes.ok) {
+          // Registration successful, now login to get token
+          const loginAgainRes = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ account: name, password: this.password })
+          });
+          if (loginAgainRes.ok) {
+             const data = await loginAgainRes.json();
+             writeCurrentUser({
+               id: data.userId,
+               username: name,
+               displayName: name,
+               role: data.role?.toLowerCase() || 'tenant',
+               token: data.token
+             });
+             this.$router.push(this.$route.query.redirect || "/");
+             return;
+          }
         }
+        
+        alert("登入或註冊失敗，請確認帳號密碼");
       } catch (e) {
         console.error(e);
         alert("登入失敗，請稍後再試");
       }
     },
-    quickLogin(user) {
-      writeCurrentUser(user);
-      this.$router.push(this.$route.query.redirect || "/");
+    async quickLogin(user) {
+      this.username = user.username;
+      this.password = "password";
+      this.role = user.role;
+      await this.login();
     },
   },
 };

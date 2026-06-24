@@ -173,7 +173,7 @@ export default {
     async fetchRooms() {
       try {
         const res = await fetch(`${API_BASE}/rooms`, {
-          headers: { "Authorization": `Bearer ${this.user.id}` },
+          headers: { "Authorization": `Bearer ${this.user.token}` },
           cache: "no-store"
         });
         const rooms = await res.json();
@@ -203,7 +203,7 @@ export default {
       if (!roomId) return;
       try {
         const res = await fetch(`${API_BASE}/history/${roomId}`, {
-          headers: { "Authorization": `Bearer ${this.user.id}` },
+          headers: { "Authorization": `Bearer ${this.user.token}` },
           cache: "no-store"
         });
         const msgs = await res.json();
@@ -241,7 +241,7 @@ export default {
         // Mark as read
         await fetch(`${API_BASE}/read/${roomId}`, {
           method: "PUT",
-          headers: { "Authorization": `Bearer ${this.user.id}` }
+          headers: { "Authorization": `Bearer ${this.user.token}` }
         });
       } catch (e) {
         console.error("Failed to fetch history", e);
@@ -255,7 +255,7 @@ export default {
         await fetch(`${API_BASE}/sendMessage`, {
           method: "POST",
           headers: { 
-            "Authorization": `Bearer ${this.user.id}`,
+            "Authorization": `Bearer ${this.user.token}`,
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
