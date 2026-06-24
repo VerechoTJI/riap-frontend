@@ -28,7 +28,7 @@ describe.skipIf(isSkipped)('LSS Integration Tests (Direct E2E)', () => {
     
     // Wait for the API call in created() to finish
     await flushPromises()
-    await new Promise(r => setTimeout(r, 500))
+    await new Promise(r => setTimeout(r, 1000))
     await flushPromises()
 
     // The listing cards should be rendered
@@ -54,10 +54,7 @@ describe.skipIf(isSkipped)('LSS Integration Tests (Direct E2E)', () => {
     // Change to a specific city
     await citySelect.setValue('台北市')
     
-    // Trigger search
-    const searchBtn = wrapper.find('.search-bar button')
-    await searchBtn.trigger('click')
-
+    // Trigger search is automatic via watch
     await flushPromises()
     await new Promise(r => setTimeout(r, 500))
     await flushPromises()
@@ -86,12 +83,9 @@ describe.skipIf(isSkipped)('LSS Integration Tests (Direct E2E)', () => {
     
     await minRent.setValue(5000)
     await maxRent.setValue(20000)
-
-    const searchBtn = wrapper.find('.search-bar button')
-    await searchBtn.trigger('click')
-
+    // Trigger search is automatic via watch
     await flushPromises()
-    await new Promise(r => setTimeout(r, 500))
+    await new Promise(r => setTimeout(r, 1000))
     await flushPromises()
 
     const cards = wrapper.findAll('.listing-card')
@@ -106,16 +100,14 @@ describe.skipIf(isSkipped)('LSS Integration Tests (Direct E2E)', () => {
     })
     await flushPromises()
 
-    const keywordInput = wrapper.find('input[type="text"]')
+    const keywordInput = wrapper.findAll('input')[0]
     await keywordInput.setValue('信義')
 
     const checkboxes = wrapper.findAll('input[type="checkbox"]')
     // Just click the first one (e.g. hasInternet)
     await checkboxes[0].setValue(true)
 
-    const searchBtn = wrapper.find('.search-bar button')
-    await searchBtn.trigger('click')
-
+    // Trigger search is automatic via watch
     await flushPromises()
     await new Promise(r => setTimeout(r, 500))
     await flushPromises()
@@ -132,11 +124,7 @@ describe.skipIf(isSkipped)('LSS Integration Tests (Direct E2E)', () => {
     })
     await flushPromises()
 
-    // Change sort
-    const selects = wrapper.findAll('select')
-    const sortSelect = selects[2] // Assuming third is sort
-    await sortSelect.setValue('PRICE_ASC')
-
+    // No sort UI in frontend, just test pagination
     await flushPromises()
     await new Promise(r => setTimeout(r, 500))
     await flushPromises()

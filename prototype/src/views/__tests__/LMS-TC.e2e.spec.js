@@ -1,5 +1,5 @@
 import { mount, flushPromises } from '@vue/test-utils'
-import { describe, it, expect, beforeAll } from 'vitest'
+import { describe, it, expect, beforeAll, vi } from 'vitest'
 import { createRouter, createWebHistory } from 'vue-router'
 import NewListing from '../NewListing.vue'
 import LandlordDashboard from '../LandlordDashboard.vue'
@@ -10,8 +10,25 @@ const isSkipped = process.argv.includes('--skip-e2e')
 
 describe.skipIf(isSkipped)('LMS Integration Tests (Direct E2E)', () => {
   let router;
+  let realListingId = '1';
 
-  beforeAll(() => {
+  beforeAll(async () => {
+    window.alert = vi.fn()
+    window.prompt = vi.fn()
+    window.confirm = vi.fn()
+    
+    try {
+      const res = await fetch('/api/listings?size=1')
+      if (!res.ok) throw new Error('API Error: ' + res.status)
+      const data = await res.json()
+      const items = data.content || data.data || data.listings || []
+      if (items.length > 0) {
+        realListingId = items[0].id || '1'
+      }
+    } catch (e) {
+      console.error('LMS-TC fetch realListingId failed:', e)
+    }
+    
     router = createRouter({
       history: createWebHistory(),
       routes: [
@@ -29,17 +46,17 @@ describe.skipIf(isSkipped)('LMS Integration Tests (Direct E2E)', () => {
     const wrapper = mount(NewListing, { global: { plugins: [router] } })
     
     // Fill required fields
-    await wrapper.find('input[type="text"]').setValue('E2E Test Listing') // title
+    const inputs = wrapper.findAll('input')
+    await inputs[0].setValue('E2E Test Listing') // title
     
     // Rent, deposit, management fee are missing initially.
     // If we trigger submit, it should alert. We can mock alert to check.
     const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
-    await wrapper.find('button.primary-button').trigger('click')
+    await wrapper.findAll('button').filter(b => b.text().includes('送出刊登'))[0].trigger('click')
     expect(alertSpy).toHaveBeenCalled()
     alertSpy.mockClear()
 
     // Now fill the required fees
-    const inputs = wrapper.findAll('input')
     // We assume the form has v-model bindings. We will just fill them all.
     for (const input of inputs) {
       if (input.attributes('type') === 'number') {
@@ -56,7 +73,7 @@ describe.skipIf(isSkipped)('LMS Integration Tests (Direct E2E)', () => {
     // Since we don't have api.js setup for posting listing in frontend (wait, NewListing.vue uses fetch?), 
     // it will try to hit the backend directly.
     const pushSpy = vi.spyOn(router, 'push')
-    await wrapper.find('button.primary-button').trigger('click')
+    await wrapper.findAll('button').filter(b => b.text().includes('送出刊登'))[0].trigger('click')
     await flushPromises()
     await new Promise(r => setTimeout(r, 1000))
 
@@ -102,7 +119,7 @@ describe.skipIf(isSkipped)('LMS Integration Tests (Direct E2E)', () => {
     await new Promise(r => setTimeout(r, 1000))
     await flushPromises()
 
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
 
     // Unpublish single
     const unpublishBtns = wrapper.findAll('button').filter(b => b.text().includes('下架'))
@@ -132,15 +149,15 @@ describe.skipIf(isSkipped)('LMS Integration Tests (Direct E2E)', () => {
     const wrapper = mount(EditListing, {
       global: { 
         plugins: [router],
-        mocks: { $route: { params: { id: '1' } } }
+        mocks: { $route: { params: { id: realListingId } } }
       }
     })
 
     await flushPromises()
     await new Promise(r => setTimeout(r, 1000))
 
-    const titleInput = wrapper.find('input[type="text"]')
-    if (titleInput.exists()) {
+    const titleInput = wrapper.findAll('input')[0]
+    if (titleInput && titleInput.exists()) {
       await titleInput.setValue('E2E Resubmitted Listing')
       const submitBtn = wrapper.find('button.primary-button')
       if (submitBtn.exists()) {

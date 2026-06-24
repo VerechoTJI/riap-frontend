@@ -5,9 +5,9 @@ import Messages from '../Messages.vue'
 import ListingDetail from '../ListingDetail.vue'
 
 vi.mock('../../lib/fixtures', () => ({
-  getListings: vi.fn().mockResolvedValue([
-    { id: 1, title: 'Test Room', city: 'Taipei', rent: 15000, status: 'published' }
-  ]),
+  getListings: vi.fn().mockImplementation(() => Promise.resolve([
+    { id: window.__TEST_REAL_LISTING_ID || '1', title: '精華地段套房', city: 'Taipei', rent: 15000, status: 'published' }
+  ])),
   getUsers: vi.fn().mockResolvedValue([
     { id: "tenant1", username: "test_tenant", displayName: "Test Tenant", role: "tenant" },
     { id: "2", username: "test_landlord", displayName: "Test Landlord", role: "landlord" }
@@ -29,11 +29,29 @@ const isSkipped = process.argv.includes('--skip-e2e')
 
 describe.skipIf(isSkipped)('RCS Integration Tests (Black-box with Real API)', () => {
   let createdRoomId = null;
+  let realListingId = '1';
 
-  beforeAll(() => {
+  beforeAll(async () => {
+    window.alert = vi.fn()
+    window.prompt = vi.fn()
+    window.confirm = vi.fn()
+    
     // We assume the backend is running on http://localhost:8080
     // and tenant1 is our test user.
     localStorage.setItem('riap_user', JSON.stringify({ id: 'tenant1', username: 'Test Tenant', role: 'tenant' }))
+
+    try {
+      const res = await fetch('/api/listings?size=1')
+      if (!res.ok) throw new Error('API Error: ' + res.status)
+      const data = await res.json()
+      const items = data.content || data.data || data.listings || []
+      if (items.length > 0) {
+        realListingId = items[0].id || '1'
+        window.__TEST_REAL_LISTING_ID = realListingId
+      }
+    } catch (e) {
+      console.error('RCS-TC fetch realListingId failed:', e)
+    }
   })
 
   it('RCS-TC01: 建立聊天室測試 (Create chat room)', async () => {
@@ -41,7 +59,7 @@ describe.skipIf(isSkipped)('RCS Integration Tests (Black-box with Real API)', ()
       global: {
         plugins: [router],
         mocks: {
-          $route: { params: { id: '1' } }
+          $route: { params: { id: realListingId } }
         }
       }
     })
@@ -135,8 +153,13 @@ describe.skipIf(isSkipped)('RCS Integration Tests (Black-box with Real API)', ()
     const sendBtn = composer.find('button')
     await sendBtn.trigger('click')
 
-    // Wait for API and WebSocket
-    await new Promise(r => setTimeout(r, 2000))
+    // Wait for API
+    await new Promise(r => setTimeout(r, 500))
+
+    // Simulate WebSocket event since happy-dom doesn't connect real WebSockets
+    window.dispatchEvent(new CustomEvent("riap-ws-message", { detail: { chatRoomId: createdRoomId } }))
+    await flushPromises()
+    await new Promise(r => setTimeout(r, 1000))
     await flushPromises()
 
     const stream = wrapper.findComponent({ name: 'ChatStream' })
