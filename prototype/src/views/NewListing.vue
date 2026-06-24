@@ -63,7 +63,11 @@
 
       <label class="field">
         <span>樓層</span>
-        <input v-model="form.floor" />
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <input type="number" v-model.number="form.floor" placeholder="所在樓層" />
+          <span>/</span>
+          <input type="number" v-model.number="form.totalFloors" placeholder="總樓層" />
+        </div>
       </label>
 
       <label class="field">
@@ -112,6 +116,7 @@ export default {
         size: null,
         layout: "",
         floor: null,
+        totalFloors: null,
         availableFrom: "",
         image: "",
         description: "",
@@ -139,6 +144,7 @@ export default {
         address: this.form.address,
         layout: this.form.layout,
         floor: Number(this.form.floor),
+        totalFloors: Number(this.form.totalFloors),
         availableFrom: this.form.availableFrom,
         image: this.form.image || undefined,
         features: (this.form.featuresText || "").split(/\s*,\s*/).map(s => s.trim()).filter(Boolean),

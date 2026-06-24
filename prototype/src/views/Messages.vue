@@ -41,11 +41,17 @@
         </div>
 
         <div class="messages-layout">
-          <ChatRoomList
-            :chatRooms="chatRooms"
-            :activeChatRoomId="activeChatRoomId"
-            @select="selectRoom"
-          />
+          <div class="messages-sidebar">
+            <ChatRoomList
+              :chatRooms="chatRooms"
+              :activeChatRoomId="activeChatRoomId"
+              @select="selectRoom"
+            />
+
+            <div class="chat-room-actions" v-if="chatRooms.length > 0">
+              <button class="danger-button" @click="clearAllRooms">清除所有聊天室</button>
+            </div>
+          </div>
 
           <main class="chat-panel" v-if="activeRoom">
             <div class="chat-panel__header">
@@ -79,6 +85,34 @@
     </template>
   </section>
 </template>
+
+<style scoped>
+.messages-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.chat-room-actions {
+  margin-top: 1rem;
+  padding: 0 4px;
+  display: flex;
+  justify-content: center;
+}
+.danger-button {
+  background-color: transparent;
+  color: #ff4d4f;
+  border: 1px solid #ff4d4f;
+  padding: 4px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s;
+}
+.danger-button:hover {
+  background-color: #ff4d4f;
+  color: white;
+}
+</style>
 
 <script>
 import { getListings, getUsers } from "../lib/fixtures";
@@ -257,6 +291,33 @@ export default {
       } catch (e) {
         console.error(e);
         alert("傳送失敗，請稍後再試");
+      }
+    },
+    
+    async clearAllRooms() {
+      if (!confirm("確定要清除所有聊天室與訊息嗎？此動作無法復原。")) return;
+      
+      try {
+        const res = await fetch(`${API_BASE}/rooms`, {
+          method: "DELETE",
+          headers: { "Authorization": `Bearer ${this.user.token}` }
+        });
+        
+        if (!res.ok) throw new Error("Delete failed");
+        
+        // Clear local state
+        this.chatRooms = [];
+        this.activeChatRoomId = null;
+        this.messages = [];
+        
+        window.dispatchEvent(new Event("riap-clear-unread"));
+        alert("聊天室已全部清除");
+        
+        // redirect to clear route query
+        this.$router.push("/messages");
+      } catch (e) {
+        console.error("Failed to clear rooms", e);
+        alert("清除失敗");
       }
     },
     

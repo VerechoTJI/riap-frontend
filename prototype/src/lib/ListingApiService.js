@@ -22,7 +22,7 @@ async function tryFetch(url, options = {}) {
 export const ListingApiService = {
   async getAllPublished() {
     const res = await tryFetch(`${API_BASE_URL}/published`);
-    if (res.ok) return res.data;
+    if (res.ok) return res.data.map(this._mapEntity);
     
     // Fallback to fixtures
     const all = await fixtures.getListings();
@@ -31,7 +31,7 @@ export const ListingApiService = {
 
   async getPending() {
     const res = await tryFetch(`${API_BASE_URL}/pending`);
-    if (res.ok) return res.data;
+    if (res.ok) return res.data.map(this._mapEntity);
 
     // Fallback to fixtures
     const all = await fixtures.getListings();
@@ -40,7 +40,7 @@ export const ListingApiService = {
 
   async getByLandlord(landlordId) {
     const res = await tryFetch(`${API_BASE_URL}/landlord/${landlordId}`);
-    if (res.ok) return res.data;
+    if (res.ok) return res.data.map(this._mapEntity);
 
     // Fallback to fixtures
     const all = await fixtures.getListings();
@@ -61,6 +61,26 @@ export const ListingApiService = {
         ...listing,
         id: Date.now(),
         status: 'pending',
+        // Map backend-style feeDisclosure back to flat prototype fields if needed
+        rent: listing.feeDisclosure?.rent,
+        deposit: listing.feeDisclosure?.deposit,
+        managementFee: listing.feeDisclosure?.managementFee,
+        waterElectricityRules: listing.feeDisclosure?.waterElectricityRules
+    });
+  },
+
+  async updateListing(id, listing) {
+    const res = await tryFetch(`${API_BASE_URL}/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(listing)
+    });
+    if (res.ok) return res.data;
+
+    // Fallback to fixtures
+    return await fixtures.updateListing({
+        ...listing,
+        id: id,
         // Map backend-style feeDisclosure back to flat prototype fields if needed
         rent: listing.feeDisclosure?.rent,
         deposit: listing.feeDisclosure?.deposit,
@@ -135,5 +155,17 @@ export const ListingApiService = {
         await fixtures.updateListing(item);
     }
     return null;
+  },
+
+  _mapEntity(l) {
+    if (!l) return l;
+    return {
+      ...l,
+      rent: l.feeDisclosure?.rent,
+      deposit: l.feeDisclosure?.deposit,
+      managementFee: l.feeDisclosure?.managementFee,
+      size: l.area,
+      image: l.imageUrl
+    };
   }
 };

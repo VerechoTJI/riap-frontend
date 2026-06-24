@@ -9,14 +9,34 @@ const STATUS_MAP = {
 };
 
 function normalize(item) {
+  const features = [];
+  if (item.hasInternet) features.push("網路");
+  if (item.hasFurniture) features.push("家具");
+  if (item.hasAC) features.push("冷氣");
+  if (item.petFriendly) features.push("可養寵物");
+  if (item.hasParking) features.push("有車位");
+
+  const propTypeMap = {
+    "SUITE": "套房",
+    "APARTMENT": "整層住家",
+    "SHARED_ROOM": "雅房",
+    "HOUSE": "透天厝"
+  };
+
   return {
     ...item,
-    rent: Math.round((item.rentCents || 0) / 100),
-    deposit: Math.round((item.depositCents || 0) / 100),
-    managementFee: Math.round((item.managementFeeCents || 0) / 100),
-    size: item.sizePing,
+    rent: item.feeDisclosure?.rent ?? Math.round((item.rentCents || 0) / 100),
+    deposit: item.feeDisclosure?.deposit ?? Math.round((item.depositCents || 0) / 100),
+    managementFee: item.feeDisclosure?.managementFee ?? Math.round((item.managementFeeCents || 0) / 100),
+    size: item.area || item.sizePing || item.size,
     image: item.imageUrl || null,
     status: STATUS_MAP[item.status] ?? item.status?.toLowerCase() ?? "unknown",
+    features,
+    layout: item.layout || "開放式格局",
+    floor: item.floor ? `${item.floor}F / ${item.totalFloors || 1}F` : (`${item.floor || 1}F / ${item.totalFloors || 1}F`),
+    type: item.propertyType ? (propTypeMap[item.propertyType] || item.propertyType) : "一般房源",
+    postedAt: item.postedAt ? new Date(item.postedAt).toLocaleDateString() : "未知時間",
+    landlord: item.landlordName || "房東"
   };
 }
 

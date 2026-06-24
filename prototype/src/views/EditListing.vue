@@ -49,7 +49,11 @@
 
       <label class="field">
         <span>樓層</span>
-        <input v-model="form.floor" />
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <input type="number" v-model.number="form.floor" placeholder="所在樓層" />
+          <span>/</span>
+          <input type="number" v-model.number="form.totalFloors" placeholder="總樓層" />
+        </div>
       </label>
 
       <label class="field">
@@ -81,13 +85,13 @@
 </template>
 
 <script>
-import { getListings, updateListing } from "../lib/fixtures";
+import { ListingApiService } from "../lib/ListingApiService";
 import { readCurrentUser } from "../lib/ui";
 
 export default {
   data() {
     return {
-      id: Number(this.$route.params.id) || null,
+      id: this.$route.params.id || null,
       form: {
         title: "",
         city: "",
@@ -97,7 +101,8 @@ export default {
         managementFee: 0,
         size: 0,
         layout: "",
-        floor: "",
+        floor: null,
+        totalFloors: null,
         availableFrom: "",
         image: "",
         description: "",
@@ -107,64 +112,90 @@ export default {
     };
   },
   async created() {
-    try {
-      const listings = await getListings();
-      const item = listings.find((l) => Number(l.id) === Number(this.id));
+    await this.load();
+  },
+  methods: {
+    async load() {
+      // In a real app, we would fetch by ID: const item = await ListingApiService.getById(this.id)
+      // Since ListingApiService doesn't have getById, we can search in published or landlord listings
+      // But we can also just fetch all published to find it
+      const all = await ListingApiService.getAllPublished();
+      const item = all.find((l) => l.id == this.id);
+      
       if (!item) {
-        alert("找不到該房源");
+        // Might be pending or private, try getting landlord's listings
+        const user = readCurrentUser();
+        if (user && user.id) {
+           const landlordListings = await ListingApiService.getByLandlord(user.id);
+           const ownItem = landlordListings.find(l => l.id == this.id);
+           if (ownItem) {
+               this.fillForm(ownItem);
+               this.loaded = true;
+               return;
+           }
+        }
+        alert("找不到房源");
         this.$router.push("/landlord");
         return;
       }
-      this.form = {
-        title: item.title || "",
-        city: item.city || "",
-        address: item.address || "",
-        rent: item.rent || 0,
-        deposit: item.deposit || 0,
-        managementFee: item.managementFee || 0,
-        size: item.size || 0,
-        layout: item.layout || "",
-        floor: item.floor || "",
-        availableFrom: item.availableFrom || "",
-        image: item.image || "",
-        description: item.description || "",
-        featuresText: (item.features || []).join(","),
-      };
+
+      this.fillForm(item);
       this.loaded = true;
-    } catch (e) {
-      console.error(e);
-      alert("載入失敗");
-      this.$router.push("/landlord");
-    }
-  },
-  methods: {
+    },
+    fillForm(item) {
+      this.form.title = item.title;
+      this.form.city = item.city;
+      this.form.address = item.address;
+      this.form.rent = item.rent || (item.feeDisclosure ? item.feeDisclosure.rent : 0);
+      this.form.deposit = item.deposit || (item.feeDisclosure ? item.feeDisclosure.deposit : 0);
+      this.form.managementFee = item.managementFee || (item.feeDisclosure ? item.feeDisclosure.managementFee : 0);
+      this.form.size = item.size || item.area;
+      this.form.layout = item.layout;
+      this.form.floor = item.floor;
+      this.form.totalFloors = item.totalFloors;
+      this.form.availableFrom = item.availableFrom;
+      this.form.image = item.image || item.imageUrl;
+      this.form.description = item.description;
+      this.form.featuresText = (item.features || []).join(", ");
+    },
     async save() {
-      if (!this.form.title || !this.form.rent) return alert("請填寫標題與月租");
-      const user = readCurrentUser() || { displayName: "未知房東" };
+      if (!this.form.title || !this.form.rent) {
+        return alert("請至少填寫標題與租金");
+      }
+      
+      const current = readCurrentUser() || { username: "unknown", id: "00000000-0000-0000-0000-000000000000" };
+
       const updated = {
-        id: this.id,
         title: this.form.title,
         city: this.form.city,
         address: this.form.address,
-        rent: Number(this.form.rent || 0),
-        deposit: Number(this.form.deposit || 0),
-        managementFee: Number(this.form.managementFee || 0),
-        size: Number(this.form.size || 0),
+        area: Number(this.form.size),
+        size: Number(this.form.size),
         layout: this.form.layout,
-        floor: this.form.floor,
+        floor: Number(this.form.floor),
+        totalFloors: Number(this.form.totalFloors),
         availableFrom: this.form.availableFrom,
         image: this.form.image || undefined,
+        imageUrl: this.form.image || undefined,
         description: this.form.description,
-        features: (this.form.featuresText || "").split(/\s*,\s*/).filter(Boolean),
-        landlord: user.displayName || user.username,
+        features: (this.form.featuresText || "").split(",").map((s) => s.trim()).filter(Boolean),
+        propertyType: "SUITE", // Hardcoded for prototype editing
+        landlordId: current.id,
+        feeDisclosure: {
+            rent: this.form.rent,
+            deposit: this.form.deposit,
+            managementFee: this.form.managementFee,
+            waterElectricityRules: "依台水台電" // hardcoded if missing
+        }
       };
 
       try {
-        await updateListing(updated);
+        await ListingApiService.updateListing(this.id, updated);
+        alert("儲存成功，房源已重新送審！");
         this.$router.push("/landlord");
       } catch (e) {
         console.error(e);
-        alert("儲存失敗");
+        alert(e.message || "儲存失敗");
       }
     },
   },
