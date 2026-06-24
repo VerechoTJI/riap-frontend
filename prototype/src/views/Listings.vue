@@ -10,16 +10,16 @@
 
         <div class="hero-stats">
           <div>
-            <strong>{{ filtered.length }}</strong>
+            <strong>{{ all.length }}</strong>
             <span>筆結果</span>
           </div>
           <div>
-            <strong>{{ cities.length }}</strong>
-            <span>個城市</span>
+            <strong>{{ page }} / {{ pages }}</strong>
+            <span>頁</span>
           </div>
           <div>
-            <strong>本機</strong>
-            <span>JSON 假資料</span>
+            <strong>後端</strong>
+            <span>即時資料</span>
           </div>
         </div>
       </div>
@@ -43,7 +43,15 @@
           <span>城市</span>
           <select v-model="city">
             <option value="">全部城市</option>
-            <option v-for="c in cities" :key="c" :value="c">{{ c }}</option>
+            <option v-for="c in CITIES" :key="c" :value="c">{{ c }}</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>房型</span>
+          <select v-model="propertyType">
+            <option value="">全部房型</option>
+            <option v-for="t in PROPERTY_TYPES" :key="t.value" :value="t.value">{{ t.label }}</option>
           </select>
         </label>
 
@@ -58,8 +66,26 @@
         </label>
       </div>
 
+      <div class="amenity-row">
+        <label class="amenity-chip" :class="{ active: hasInternet }">
+          <input type="checkbox" v-model="hasInternet" /> 網路
+        </label>
+        <label class="amenity-chip" :class="{ active: hasFurniture }">
+          <input type="checkbox" v-model="hasFurniture" /> 附傢俱
+        </label>
+        <label class="amenity-chip" :class="{ active: hasAC }">
+          <input type="checkbox" v-model="hasAC" /> 冷氣
+        </label>
+        <label class="amenity-chip" :class="{ active: petFriendly }">
+          <input type="checkbox" v-model="petFriendly" /> 可養寵物
+        </label>
+        <label class="amenity-chip" :class="{ active: hasParking }">
+          <input type="checkbox" v-model="hasParking" /> 停車位
+        </label>
+      </div>
+
       <div class="filter-actions">
-        <div class="filter-note">預設只顯示已審核房源。</div>
+        <div class="filter-note">僅顯示已審核上架房源。</div>
         <button class="ghost-button" @click="clearFilters">清除條件</button>
       </div>
     </div>
@@ -83,9 +109,9 @@
           </div>
           <p>{{ item.description }}</p>
           <div class="listing-meta">
-            <span>{{ item.city }}</span>
-            <span>押金 NT$ {{ formatTwd(item.deposit || item.rent * 2) }}</span>
-            <span>{{ item.size || 0 }} 坪</span>
+            <span>{{ item.city }}{{ item.district ? ' · ' + item.district : '' }}</span>
+            <span>押金 NT$ {{ formatTwd(item.deposit) }}</span>
+            <span>{{ item.size || item.sizePing || 0 }} 坪</span>
           </div>
         </div>
       </router-link>
@@ -106,53 +132,61 @@
 
 <script>
 import { ListingApiService } from "../lib/ListingApiService";
+import { searchListings } from "../lib/api";
 import { formatTwd, handleListingImageError, listingImage, statusLabel, statusTone } from "../lib/ui";
+
+const CITIES = ["台北市", "新北市", "桃園市", "台中市", "台南市", "高雄市", "基隆市", "新竹市", "嘉義市"];
+const PROPERTY_TYPES = [
+  { value: "STUDIO",    label: "套房" },
+  { value: "BEDROOM",   label: "雅房" },
+  { value: "APARTMENT", label: "公寓" },
+  { value: "VILLA",     label: "別墅" },
+  { value: "HOUSE",     label: "整層" },
+];
+const PER_PAGE = 6;
 
 export default {
   data() {
     return {
+      CITIES,
+      PROPERTY_TYPES,
       q: "",
       city: "",
+      propertyType: "",
       minRent: null,
       maxRent: null,
+      hasInternet: false,
+      hasFurniture: false,
+      hasAC: false,
+      petFriendly: false,
+      hasParking: false,
       page: 1,
-      per: 6,
       all: [],
+      loading: false,
     };
   },
   async created() {
-    try {
-      this.all = await ListingApiService.getAllPublished();
-    } catch (error) {
-      console.error(error);
-    }
+    await this.fetchListings();
   },
   computed: {
-    cities() {
-      return Array.from(new Set(this.all.map((listing) => listing.city))).filter(Boolean);
-    },
-    filtered() {
-      return this.all
-        .filter((listing) => {
-          // Status check redundant as API returns only published
-          if (this.city && listing.city !== this.city) return false;
-          if (this.q) {
-            const searchable = `${listing.title} ${listing.description} ${listing.city}`.toLowerCase();
-            if (!searchable.includes(this.q.toLowerCase())) return false;
-          }
-          const rent = listing.feeDisclosure?.rent || listing.rent;
-          if (this.minRent !== null && this.minRent !== "" && Number(rent) < Number(this.minRent)) return false;
-          if (this.maxRent !== null && this.maxRent !== "" && Number(rent) > Number(this.maxRent)) return false;
-          return true;
-        })
-        .sort((left, right) => (right.id > left.id ? 1 : -1));
-    },
     pages() {
-      return Math.max(1, Math.ceil(this.filtered.length / this.per));
+      return Math.max(1, Math.ceil(this.all.length / PER_PAGE));
     },
     paged() {
-      return this.filtered.slice((this.page - 1) * this.per, this.page * this.per);
+      return this.all.slice((this.page - 1) * PER_PAGE, this.page * PER_PAGE);
     },
+  },
+  watch: {
+    q()            { this.page = 1; this.fetchListings(); },
+    city()         { this.page = 1; this.fetchListings(); },
+    propertyType() { this.page = 1; this.fetchListings(); },
+    minRent()      { this.page = 1; this.fetchListings(); },
+    maxRent()      { this.page = 1; this.fetchListings(); },
+    hasInternet()  { this.page = 1; this.fetchListings(); },
+    hasFurniture() { this.page = 1; this.fetchListings(); },
+    hasAC()        { this.page = 1; this.fetchListings(); },
+    petFriendly()  { this.page = 1; this.fetchListings(); },
+    hasParking()   { this.page = 1; this.fetchListings(); },
   },
   methods: {
     formatTwd,
@@ -160,6 +194,29 @@ export default {
     listingImage,
     statusLabel,
     statusTone,
+    async fetchListings() {
+      this.loading = true;
+      try {
+        this.all = await searchListings({
+          keyword:      this.q || undefined,
+          city:         this.city || undefined,
+          propertyType: this.propertyType || undefined,
+          minRent:      this.minRent || undefined,
+          maxRent:      this.maxRent || undefined,
+          hasInternet:  this.hasInternet || undefined,
+          hasFurniture: this.hasFurniture || undefined,
+          hasAC:        this.hasAC || undefined,
+          petFriendly:  this.petFriendly || undefined,
+          hasParking:   this.hasParking || undefined,
+          size: 100,
+        });
+      } catch (err) {
+        console.error("API 錯誤：", err);
+        this.all = [];
+      } finally {
+        this.loading = false;
+      }
+    },
     prev() {
       if (this.page > 1) this.page -= 1;
     },
@@ -169,8 +226,14 @@ export default {
     clearFilters() {
       this.q = "";
       this.city = "";
+      this.propertyType = "";
       this.minRent = null;
       this.maxRent = null;
+      this.hasInternet = false;
+      this.hasFurniture = false;
+      this.hasAC = false;
+      this.petFriendly = false;
+      this.hasParking = false;
       this.page = 1;
     },
   },
@@ -269,8 +332,38 @@ export default {
 
 .filters-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
   gap: 14px;
+}
+
+.amenity-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.amenity-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  font-size: 0.92rem;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.amenity-chip input[type="checkbox"] {
+  accent-color: var(--primary-dark);
+}
+
+.amenity-chip.active {
+  background: rgba(180, 95, 52, 0.1);
+  border-color: rgba(180, 95, 52, 0.45);
+  color: var(--primary-dark);
 }
 
 .field {

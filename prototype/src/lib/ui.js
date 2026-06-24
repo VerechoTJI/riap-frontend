@@ -46,11 +46,17 @@ export function formatTwd(value) {
 export function statusLabel(status) {
   switch (status) {
     case "published":
+    case "AVAILABLE":
       return "已刊登";
     case "pending":
+    case "PENDING":
       return "待審核";
     case "returned":
+    case "REJECTED":
       return "已退回";
+    case "rented":
+    case "RENTED":
+      return "已出租";
     default:
       return status || "未知";
   }
@@ -59,10 +65,13 @@ export function statusLabel(status) {
 export function statusTone(status) {
   switch (status) {
     case "published":
+    case "AVAILABLE":
       return "success";
     case "pending":
+    case "PENDING":
       return "warning";
     case "returned":
+    case "REJECTED":
       return "danger";
     default:
       return "neutral";
