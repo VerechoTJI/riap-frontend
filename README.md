@@ -25,6 +25,8 @@ npm install
 npm run dev
 # build production bundle
 npm run build
+# run vitest tests (ensure backend is running for e2e)
+npm run test
 ```
 
 If you prefer pnpm:

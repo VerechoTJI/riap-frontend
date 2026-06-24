@@ -23,9 +23,24 @@ npm run dev
 
 備註（開發者提示）
 
-- 頁面使用 Vue 與 client-side state 來讀取 `public/fixtures/` 的資料，所有互動均發生在瀏覽器端（localStorage / memory），不會呼叫後端。
-- 若要快速查看列表與明細，可以使用對應 Vue 路由或單頁元件。
+- 過去頁面使用 Vue 與 client-side state 來讀取本地假資料，但**現在已切換為串接真實後端 API (`http://localhost:8080`)**。
+- 若要快速查看列表與明細，請確保後端伺服器（Spring Boot）已在背景啟動。
 - UI 文案使用繁體中文。
+
+## 執行前端測試 (Vitest)
+
+專案目前配有完整的「前端元件端到端 (E2E) 測試」，會直接掛載 Vue 元件並向真實後端發送請求。
+在跑測試之前，**請務必確認後端已經啟動**。
+
+```powershell
+npm run test
+```
+
+> **跳過 E2E 測試：**
+> 如果你還沒啟動後端，或是只想跑純前端的單元測試，請加上 `--skip-e2e` 參數來跳過這些需要真實 API 的測試：
+> ```powershell
+> npm run test -- --skip-e2e
+> ```
 
 Vite 開發伺服器說明
 
@@ -45,8 +60,8 @@ Admin / Landlord testing notes
 
 建議的迭代步驟
 
-- 將 fixtures 與 UI 綁定，完成基本搜尋、分頁與過濾；然後加入簡單的訊息模擬流程。
-- 若要串接真實後端，實作一個小型 HTTP API 並將前端中的 fetch 呼叫切換為真實端點。
+- 將 fixtures 與 UI 綁定，完成基本搜尋、分頁與過濾；然後加入簡單的訊息模擬流程。（已完成）
+- 若要串接真實後端，實作一個小型 HTTP API 並將前端中的 fetch 呼叫切換為真實端點。（**目前已全面串接真實後端**）
 
 作者: 開發團隊原型
 日期: 2026-04-18
