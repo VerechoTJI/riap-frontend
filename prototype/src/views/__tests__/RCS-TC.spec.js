@@ -18,7 +18,11 @@ vi.mock('../../lib/fixtures', () => ({
 
 const router = createRouter({
   history: createWebHistory(),
-  routes: [{ path: '/messages', name: 'messages', component: Messages }]
+  routes: [
+    { path: '/', redirect: '/messages' },
+    { path: '/messages', name: 'messages', component: Messages },
+    { path: '/:pathMatch(.*)*', component: { template: '<div>Mock</div>' } }
+  ]
 })
 
 describe('RCS Integration Tests (Black-box with Real API)', () => {
