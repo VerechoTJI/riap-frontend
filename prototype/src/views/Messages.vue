@@ -15,7 +15,7 @@
         <span class="eyebrow">即時溝通</span>
         <h1>把詢問、回覆與房源脈絡整理成一條清晰的對話。</h1>
         <p>
-          訊息內容儲存在記憶體，用於展示 tenant / landlord 的互動流程。
+          訊息內容只儲存在前端記憶體，適合用於展示 tenant / landlord 的互動流程。
         </p>
       </div>
 
@@ -81,7 +81,6 @@
 <script>
 import { getListings, getMessages, addMessage } from "../lib/fixtures";
 import { formatDate, formatTwd, listingImage, readCurrentUser } from "../lib/ui";
-import { buildThreads } from "../lib/message-utils";
 
 export default {
   data() {
@@ -100,47 +99,11 @@ export default {
     },
     currentThread() {
       const listing = this.listings.find((item) => item.id === this.activeThread?.listingId) || this.listings[0] || {};
-      const user = this.user || { displayName: null, username: null, role: null };
-
-      const landlordName = listing.landlord || null;
-      let fromName = user.displayName || user.username || "我";
-      let toName = landlordName || "房東";
-
-      // If the current user is the landlord of this listing, show the other party on the left
-      if (
-        user.role === "landlord" &&
-        landlordName &&
-        (landlordName === (user.displayName || user.username))
-      ) {
-        const msgs = this.messages.filter((m) => m.listingId === listing.id);
-        const recent = msgs.slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
-        const counterpart = recent ? (recent.from === landlordName ? recent.to : recent.from) : "房客";
-        fromName = counterpart;
-        toName = landlordName;
-      }
-
-      // Safety: if both sides resolve to the same display (e.g. "Bob Wang → Bob Wang"),
-      // try to infer the counterpart from recent messages.
-      if (fromName === toName) {
-        const msgs = this.messages.filter((m) => m.listingId === listing.id);
-        if (msgs.length > 0) {
-          const recent = msgs.slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
-          if (recent) {
-            if (recent.from && recent.from !== landlordName) {
-              fromName = recent.from;
-            } else if (recent.to && recent.to !== landlordName) {
-              fromName = recent.to;
-            } else {
-              fromName = user.displayName || user.username || "我";
-            }
-          }
-        }
-      }
-
+      const user = this.user || { displayName: null, username: null };
       return {
         title: listing.title || "租屋對話",
-        from: fromName,
-        to: toName,
+        from: user.displayName || user.username || "我",
+        to: listing.landlord || "房東",
         statusLabel: "目前詢問",
       };
     },
@@ -169,7 +132,7 @@ export default {
       const filteredMessages = this.user && this.user.role === "admin" ? messages.filter((m) => !m.sample) : messages;
       this.messages = filteredMessages;
       this.listings = listings;
-      this.threads = buildThreads(listings, this.messages);
+      this.threads = this.buildThreads(listings, this.messages);
       this.activeThreadId = Number(this.$route.query.listing) || this.threads[0]?.id || null;
 
       this.$nextTick(() => this.scrollToBottom());
@@ -279,7 +242,7 @@ export default {
           }
         } else {
           this.listings = await getListings();
-          this.threads = buildThreads(this.listings, this.messages);
+          this.threads = this.buildThreads(this.listings, this.messages);
         }
       } catch (e) {
         console.error(e);
@@ -294,7 +257,25 @@ export default {
       });
     },
 
-    
+    buildThreads(listingsArg, messagesArg) {
+      const msgs = messagesArg || this.messages || [];
+      const lst = listingsArg || this.listings || [];
+      const all = lst.map((listing) => {
+        const m = msgs.filter((mm) => mm.listingId === listing.id);
+        const recent = m.slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))[0];
+        return {
+          id: listing.id,
+          listingId: listing.id,
+          title: listing.title,
+          city: listing.city,
+          image: listingImage(listing),
+          preview: recent?.body || `${listing.city} · NT$ ${formatTwd(listing.rent)}`,
+          recentAt: recent?.createdAt || listing.postedAt || null,
+        };
+      });
+      all.sort((a,b) => new Date(b.recentAt || 0) - new Date(a.recentAt || 0));
+      return all.slice(0,3);
+    },
 
     scrollToBottom() {
       try {

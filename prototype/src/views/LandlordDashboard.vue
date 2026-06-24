@@ -7,7 +7,10 @@
         <p>目前仍是本機資料，適合展示房東管理流程、刊登狀態與快速修改操作。</p>
       </div>
 
-      <button class="primary-button" @click="create">新增房源</button>
+      <div class="hero-actions">
+        <button class="primary-button" @click="create">新增房源</button>
+        <button class="ghost-button danger" @click="unpublishAll">全部下架</button>
+      </div>
     </div>
 
     <div class="dashboard-metrics">
@@ -44,7 +47,8 @@
           </div>
           <div class="action-row">
             <button class="ghost-button" @click="edit(listing)">編輯</button>
-            <button class="ghost-button danger" @click="remove(listing)">刪除</button>
+            <button v-if="listing.status === 'PUBLISHED' || listing.status === 'published'" class="ghost-button danger" @click="remove(listing)">下架</button>
+            <button v-if="listing.status === 'PRIVATE' || listing.status === 'private' || listing.status === 'RETURNED' || listing.status === 'returned'" class="primary-button small" @click="resubmit(listing)">重新送審</button>
           </div>
         </div>
       </article>
@@ -53,29 +57,22 @@
 </template>
 
 <script>
-import { getListings } from "../lib/fixtures";
-import { formatTwd, handleListingImageError, listingImage, statusLabel, statusTone } from "../lib/ui";
+import { ListingApiService } from "../lib/ListingApiService";
+import { formatTwd, handleListingImageError, listingImage, statusLabel, statusTone, readCurrentUser } from "../lib/ui";
 
 export default {
   data() {
-    return { all: [] };
+    return { myListings: [] };
   },
   async created() {
-    try {
-      this.all = await getListings();
-    } catch (error) {
-      console.error(error);
-    }
+    this.fetchMyListings();
   },
   computed: {
-    myListings() {
-      return this.all;
-    },
     publishedCount() {
-      return this.all.filter((listing) => listing.status === "published").length;
+      return this.myListings.filter((listing) => listing.status === "PUBLISHED" || listing.status === "published").length;
     },
     pendingCount() {
-      return this.all.filter((listing) => listing.status === "pending").length;
+      return this.myListings.filter((listing) => listing.status === "PENDING" || listing.status === "pending").length;
     },
   },
   methods: {
@@ -84,16 +81,52 @@ export default {
     listingImage,
     statusLabel,
     statusTone,
+    async fetchMyListings() {
+      const user = readCurrentUser();
+      if (!user || !user.id) return;
+      try {
+        this.myListings = await ListingApiService.getByLandlord(user.id);
+      } catch (error) {
+        console.error(error);
+      }
+    },
     create() {
       this.$router.push('/listing/new');
     },
     edit(listing) {
       this.$router.push(`/listing/${listing.id}/edit`);
     },
-    remove(listing) {
-      if (!confirm(`確定刪除「${listing.title}」？`)) return;
-      this.all = this.all.filter((item) => item.id !== listing.id);
+    async remove(listing) {
+      if (!confirm(`確定下架「${listing.title}」？`)) return;
+      try {
+        await ListingApiService.unpublish(listing.id);
+        alert("房源已下架");
+        this.fetchMyListings();
+      } catch (e) {
+        alert("下架失敗");
+      }
     },
+    async unpublishAll() {
+        const user = readCurrentUser();
+        if (!user || !user.id) return;
+        if (!confirm("確定要下架所有已刊登房源嗎？")) return;
+        try {
+            await ListingApiService.bulkUnpublish(user.id);
+            alert("所有房源已下架");
+            this.fetchMyListings();
+        } catch (e) {
+            alert("下架失敗");
+        }
+    },
+    async resubmit(listing) {
+        try {
+            await ListingApiService.resubmit(listing.id);
+            alert("房源已重新送審");
+            this.fetchMyListings();
+        } catch (e) {
+            alert("重新送審失敗");
+        }
+    }
   },
 };
 </script>
@@ -121,6 +154,17 @@ export default {
   padding: 30px;
   background: linear-gradient(135deg, rgba(23, 50, 77, 0.96), rgba(61, 90, 118, 0.9));
   color: #fff;
+}
+
+.hero-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.primary-button.small {
+    padding: 8px 12px;
+    font-size: 0.9rem;
 }
 
 .dashboard-hero h1 {

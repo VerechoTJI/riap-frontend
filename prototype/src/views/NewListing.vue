@@ -21,6 +21,17 @@
       </label>
 
       <label class="field">
+        <span>房源類型</span>
+        <select v-model="form.propertyType">
+          <option value="SUITE">分租套房</option>
+          <option value="STUDIO">獨立套房</option>
+          <option value="APARTMENT">公寓</option>
+          <option value="WHOLE_FLOOR">整層住家</option>
+          <option value="OTHER">其他</option>
+        </select>
+      </label>
+
+      <label class="field">
         <span>月租 (NT$)</span>
         <input type="number" v-model.number="form.rent" />
       </label>
@@ -33,6 +44,11 @@
       <label class="field">
         <span>管理費 (NT$)</span>
         <input type="number" v-model.number="form.managementFee" />
+      </label>
+
+      <label class="field">
+        <span>水電費計算基準</span>
+        <input v-model="form.waterElectricityRules" placeholder="例如：台水台電、一度5元" />
       </label>
 
       <label class="field">
@@ -79,8 +95,8 @@
 </template>
 
 <script>
+import { ListingApiService } from "../lib/ListingApiService";
 import { readCurrentUser } from "../lib/ui";
-import { addListing } from "../lib/fixtures";
 
 export default {
   data() {
@@ -89,52 +105,53 @@ export default {
         title: "",
         city: "",
         address: "",
-        rent: 0,
-        deposit: 0,
-        managementFee: 0,
-        size: 0,
+        rent: null,
+        deposit: null,
+        managementFee: null,
+        waterElectricityRules: "",
+        size: null,
         layout: "",
-        floor: "",
+        floor: null,
         availableFrom: "",
         image: "",
         description: "",
         featuresText: "",
+        propertyType: "SUITE"
       },
     };
   },
   methods: {
     async submit() {
-      if (!this.form.title || !this.form.rent) {
-        return alert("請填寫標題與月租");
+      // Robust client-side validation (AC-LMS-01)
+      if (!this.form.title || !this.form.rent || !this.form.deposit || 
+          !this.form.managementFee || !this.form.waterElectricityRules) {
+        return alert("請填寫標題與所有必填費用欄位（租金、押金、管理費、水電規則）");
       }
 
-      const current = readCurrentUser() || { username: "unknown", displayName: "未知房東" };
-      const newListing = {
-        id: Date.now(),
+      const current = readCurrentUser() || { username: "unknown", id: "00000000-0000-0000-0000-000000000000" };
+      
+      const listingEntity = {
         title: this.form.title,
         description: this.form.description,
-        rent: Number(this.form.rent || 0),
-        city: this.form.city || "",
-        address: this.form.address || "",
-        deposit: Number(this.form.deposit || 0),
-        managementFee: Number(this.form.managementFee || 0),
-        size: Number(this.form.size || 0),
-        layout: this.form.layout || "",
-        floor: this.form.floor || "",
-        availableFrom: this.form.availableFrom || "",
-        landlord: current.displayName || current.username,
-        status: "pending",
-        image: this.form.image || undefined,
-        features: (this.form.featuresText || "").split(/\s*,\s*/).filter(Boolean),
-        postedAt: new Date().toISOString(),
+        area: Number(this.form.size),
+        floor: Number(this.form.floor),
+        propertyType: this.form.propertyType,
+        landlordId: current.id, // Assuming UUID from UAS
+        feeDisclosure: {
+          rent: this.form.rent,
+          deposit: this.form.deposit,
+          managementFee: this.form.managementFee,
+          waterElectricityRules: this.form.waterElectricityRules
+        }
       };
 
       try {
-        await addListing(newListing);
+        await ListingApiService.publish(listingEntity);
+        alert("刊登成功，請靜候管理員審核");
         this.$router.push("/landlord");
       } catch (e) {
         console.error(e);
-        alert("儲存失敗，請稍後再試");
+        alert(e.message || "儲存失敗，請稍後再試");
       }
     },
   },

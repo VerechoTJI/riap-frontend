@@ -5,7 +5,7 @@
         <span class="eyebrow">精選房源</span>
         <h1>把條件拉近一點，理想的房子就會更快出現。</h1>
         <p>
-          透過關鍵字、城市與租金區間，即可在前端快速搜尋房源。
+          透過關鍵字、城市與租金區間，即可在前端快速搜尋房源。這一版保留了分頁、狀態標籤與開發者查看待審核項目的切換。
         </p>
 
         <div class="hero-stats">
@@ -105,7 +105,7 @@
 </template>
 
 <script>
-import { getListings } from "../lib/fixtures";
+import { ListingApiService } from "../lib/ListingApiService";
 import { formatTwd, handleListingImageError, listingImage, statusLabel, statusTone } from "../lib/ui";
 
 export default {
@@ -122,7 +122,7 @@ export default {
   },
   async created() {
     try {
-      this.all = await getListings();
+      this.all = await ListingApiService.getAllPublished();
     } catch (error) {
       console.error(error);
     }
@@ -134,17 +134,18 @@ export default {
     filtered() {
       return this.all
         .filter((listing) => {
-          if (listing.status !== "published") return false;
+          // Status check redundant as API returns only published
           if (this.city && listing.city !== this.city) return false;
           if (this.q) {
-            const searchable = `${listing.title} ${listing.description} ${listing.city} ${(listing.features || []).join(" ")}`.toLowerCase();
+            const searchable = `${listing.title} ${listing.description} ${listing.city}`.toLowerCase();
             if (!searchable.includes(this.q.toLowerCase())) return false;
           }
-          if (this.minRent !== null && this.minRent !== "" && Number(listing.rent) < Number(this.minRent)) return false;
-          if (this.maxRent !== null && this.maxRent !== "" && Number(listing.rent) > Number(this.maxRent)) return false;
+          const rent = listing.feeDisclosure?.rent || listing.rent;
+          if (this.minRent !== null && this.minRent !== "" && Number(rent) < Number(this.minRent)) return false;
+          if (this.maxRent !== null && this.maxRent !== "" && Number(rent) > Number(this.maxRent)) return false;
           return true;
         })
-        .sort((left, right) => Number(right.id) - Number(left.id));
+        .sort((left, right) => (right.id > left.id ? 1 : -1));
     },
     pages() {
       return Math.max(1, Math.ceil(this.filtered.length / this.per));

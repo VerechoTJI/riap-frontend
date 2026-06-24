@@ -44,24 +44,15 @@
 </template>
 
 <script>
-import { getListings } from "../lib/fixtures";
+import { ListingApiService } from "../lib/ListingApiService";
 import { formatTwd, handleListingImageError, listingImage, statusLabel, statusTone } from "../lib/ui";
 
 export default {
   data() {
-    return { all: [] };
+    return { pending: [] };
   },
   async created() {
-    try {
-      this.all = await getListings();
-    } catch (error) {
-      console.error(error);
-    }
-  },
-  computed: {
-    pending() {
-      return this.all.filter((listing) => listing.status === "pending");
-    },
+    this.fetchPending();
   },
   methods: {
     formatTwd,
@@ -69,15 +60,33 @@ export default {
     listingImage,
     statusLabel,
     statusTone,
-    publish(listing) {
-      listing.status = "published";
-      listing.reviewNote = "";
+    async fetchPending() {
+      try {
+        this.pending = await ListingApiService.getPending();
+      } catch (error) {
+        console.error(error);
+      }
     },
-    returnItem(listing) {
+    async publish(listing) {
+      try {
+        await ListingApiService.review(listing.id, "PUBLISHED", "");
+        alert("已發布房源");
+        this.fetchPending();
+      } catch (e) {
+        alert("發布失敗");
+      }
+    },
+    async returnItem(listing) {
       const reason = prompt("請輸入退回原因", "照片需要補充更多角度");
       if (reason === null) return;
-      listing.status = "returned";
-      listing.reviewNote = reason.trim();
+      
+      try {
+        await ListingApiService.review(listing.id, "RETURNED", reason.trim());
+        alert("已退回房源");
+        this.fetchPending();
+      } catch (e) {
+        alert("操作失敗");
+      }
     },
   },
 };
