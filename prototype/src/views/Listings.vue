@@ -137,11 +137,11 @@ import { formatTwd, handleListingImageError, listingImage, statusLabel, statusTo
 
 const CITIES = ["台北市", "新北市", "桃園市", "台中市", "台南市", "高雄市", "基隆市", "新竹市", "嘉義市"];
 const PROPERTY_TYPES = [
-  { value: "STUDIO",    label: "套房" },
-  { value: "BEDROOM",   label: "雅房" },
-  { value: "APARTMENT", label: "公寓" },
-  { value: "VILLA",     label: "別墅" },
-  { value: "HOUSE",     label: "整層" },
+  { value: "SUITE",       label: "分租套房" },
+  { value: "STUDIO",      label: "獨立套房" },
+  { value: "APARTMENT",   label: "公寓" },
+  { value: "WHOLE_FLOOR", label: "整層住家" },
+  { value: "OTHER",       label: "其他" }
 ];
 const PER_PAGE = 6;
 
