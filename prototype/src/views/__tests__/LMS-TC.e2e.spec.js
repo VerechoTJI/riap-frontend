@@ -6,7 +6,7 @@ import LandlordDashboard from '../LandlordDashboard.vue'
 import AdminReview from '../AdminReview.vue'
 import EditListing from '../EditListing.vue'
 
-const isSkipped = process.env.SKIP_E2E === 'true'
+const isSkipped = process.argv.includes('--skip-e2e')
 
 describe.skipIf(isSkipped)('LMS Integration Tests (Direct E2E)', () => {
   let router;

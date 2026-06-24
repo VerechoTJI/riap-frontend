@@ -25,7 +25,7 @@ const router = createRouter({
   ]
 })
 
-const isSkipped = process.env.SKIP_E2E === 'true'
+const isSkipped = process.argv.includes('--skip-e2e')
 
 describe.skipIf(isSkipped)('RCS Integration Tests (Black-box with Real API)', () => {
   let createdRoomId = null;

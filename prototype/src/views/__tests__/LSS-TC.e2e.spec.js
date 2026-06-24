@@ -3,8 +3,8 @@ import { describe, it, expect, beforeAll } from 'vitest'
 import { createRouter, createWebHistory } from 'vue-router'
 import Listings from '../Listings.vue'
 
-// If SKIP_E2E is set, skip the entire suite
-const isSkipped = process.env.SKIP_E2E === 'true'
+// If --skip-e2e is passed, skip the entire suite
+const isSkipped = process.argv.includes('--skip-e2e')
 
 describe.skipIf(isSkipped)('LSS Integration Tests (Direct E2E)', () => {
   let router;
