@@ -328,4 +328,13 @@ export default {
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 768px) {
+  .detail-hero {
+    min-height: 280px;
+  }
+  .spec-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
 </style>

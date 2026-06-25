@@ -520,16 +520,32 @@ export default {
   cursor: pointer;
 }
 
-@media (max-width: 980px) {
+@media (max-width: 1100px) {
   .hero-card,
   .listing-grid,
   .filters-grid {
     grid-template-columns: 1fr;
   }
 
+  .hero-media {
+    min-height: auto;
+    height: 140px;
+  }
+}
+
+@media (max-width: 768px) {
+  .hero-stats {
+    grid-template-columns: 1fr;
+  }
+
   .filter-actions {
     flex-direction: column;
     align-items: stretch;
+    text-align: center;
+  }
+
+  .filter-actions button {
+    width: 100%;
   }
 }
 </style>
