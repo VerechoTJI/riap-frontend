@@ -2,9 +2,9 @@
   <section class="review-page">
     <div class="review-hero">
       <div>
-        <span class="eyebrow">管理員審核</span>
-        <h1>待審核房源一眼看清，發布與退回都有明確動作。</h1>
-        <p>這個畫面用於展示審核節奏、回覆原因與狀態切換。</p>
+        <span class="eyebrow">平台管理</span>
+        <h1>審查房源刊登申請，確保平台資訊品質。</h1>
+        <p>在這裡您可以查看所有待審核的房源，決定是否發布或退回申請。</p>
       </div>
 
       <div class="review-count">

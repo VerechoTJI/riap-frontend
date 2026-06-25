@@ -2,9 +2,9 @@
   <section class="messages-page">
     <div v-if="!user" class="messages-lock">
       <div class="messages-lock__card">
-        <span class="eyebrow">需要登入</span>
-        <h1>訊息功能僅供登入使用</h1>
-        <p>請先登入，才能查看對話、發送訊息與切換房源聊天串。</p>
+        <span class="eyebrow">會員專屬</span>
+        <h1>登入以查看訊息</h1>
+        <p>登入後即可與房東或房客進行對話，隨時掌握租屋動態。</p>
         <router-link class="primary-button" :to="{ path: '/login', query: { redirect: '/messages' } }">前往登入</router-link>
       </div>
     </div>
@@ -22,22 +22,19 @@
       <template v-else>
         <div class="messages-hero">
           <div>
-            <span class="eyebrow">即時溝通</span>
-            <h1>把詢問、回覆與房源脈絡整理成一條清晰的對話。</h1>
+            <span class="eyebrow">訊息中心</span>
+            <h1>隨時與房東或房客保持聯繫</h1>
             <p>
-              訊息內容儲存在記憶體，用於展示 tenant / landlord 的互動流程。
+              在這裡查看所有的對話紀錄，即時回覆訊息，並追蹤每一筆房源的討論進度。
             </p>
           </div>
 
-          <div class="conversation-card">
-            <div class="conversation-card__media">
-              <img :src="listingHero" alt="目前對話房源" />
-            </div>
-            <div class="conversation-card__meta">
-              <strong>{{ currentListingTitle }}</strong>
-              <span>{{ currentListingCity }}</span>
-            </div>
-          </div>
+          <ConversationListingCard
+            :listing="activeListing"
+            :title="currentListingTitle"
+            :city="currentListingCity"
+            :image="listingHero"
+          />
         </div>
 
         <div class="messages-layout">
@@ -56,7 +53,9 @@
           <main class="chat-panel" v-if="activeRoom">
             <div class="chat-panel__header">
               <div>
-                <span class="eyebrow">{{ currentChatRoom.statusLabel }}</span>
+                <div class="chat-panel__status">
+                  <span class="eyebrow">{{ currentChatRoom.statusLabel }}</span>
+                </div>
                 <h2>{{ currentChatRoom.title }}</h2>
               </div>
               <div class="chat-panel__users">
@@ -115,11 +114,13 @@
 </style>
 
 <script>
-import { getListings, getUsers } from "../lib/fixtures";
-import { listingImage, readCurrentUser } from "../lib/ui";
+import { getUsers } from "../lib/fixtures";
+import { ListingApiService } from "../lib/ListingApiService";
+import { listingImage, readCurrentUser, formatTwd } from "../lib/ui";
 import ChatRoomList from "../components/chat/ChatRoomList.vue";
 import ChatStream from "../components/chat/ChatStream.vue";
 import ChatComposer from "../components/chat/ChatComposer.vue";
+import ConversationListingCard from "../components/chat/ConversationListingCard.vue";
 
 const API_BASE = "http://localhost:8080/api/chat";
 const WS_BASE = "ws://localhost:8080/ws/chat/connect";
@@ -128,7 +129,8 @@ export default {
   components: {
     ChatRoomList,
     ChatStream,
-    ChatComposer
+    ChatComposer,
+    ConversationListingCard
   },
   data() {
     return {
@@ -155,20 +157,29 @@ export default {
       };
     },
     currentListingTitle() {
-      return this.activeRoom?.title || "租屋對話";
+      if (this.activeRoom?.title) return this.activeRoom.title;
+      return this.activeListing ? this.activeListing.title : "租屋對話";
     },
     currentListingCity() {
-      return this.activeRoom?.city || "尚未選擇房源";
+      if (this.activeRoom?.city) return this.activeRoom.city;
+      return this.activeListing ? this.activeListing.city : "尚未選擇房源";
     },
     listingHero() {
-      return this.activeRoom?.image || listingImage(this.listings[0] || { id: 1 });
+      return this.activeRoom?.image || listingImage(this.activeListing || { id: 1 });
+    },
+    activeListing() {
+      if (!this.listings.length) return null;
+      if (!this.activeRoom?.listingId) return this.listings[0];
+      return this.listings.find((l) => String(l.id) === String(this.activeRoom.listingId)) || this.listings[0];
     },
   },
   async created() {
     this.user = readCurrentUser();
     if (!this.user) return;
     try {
-      this.listings = await getListings();
+      const published = await ListingApiService.getAllPublished();
+      const pending = await ListingApiService.getPending();
+      this.listings = [...published, ...pending];
       this.users = await getUsers();
       await this.fetchRooms();
       this.activeChatRoomId = this.$route.query.roomId || null;
@@ -187,6 +198,7 @@ export default {
     window.removeEventListener("riap-ws-message", this.handleWsMessage);
   },
   methods: {
+    formatTwd,
     selectRoom(roomId) {
       this.activeChatRoomId = roomId;
       // Also update URL so refresh works
@@ -407,8 +419,7 @@ export default {
   align-items: stretch;
 }
 
-.messages-hero > div,
-.conversation-card,
+.messages-hero > div:first-child,
 .chat-panel {
   border-radius: 28px;
   background: var(--card);
@@ -417,7 +428,7 @@ export default {
 }
 
 .messages-hero > div:first-child {
-  padding: 34px;
+  padding: 16px 24px;
   background: linear-gradient(135deg, rgba(23, 50, 77, 0.96), rgba(180, 95, 52, 0.76));
   color: #fff;
 }
@@ -432,41 +443,20 @@ export default {
 }
 
 .messages-hero h1 {
-  font-size: clamp(2rem, 3vw, 3.4rem);
-  line-height: 1.08;
-  margin: 18px 0 12px;
+  font-size: clamp(1.4rem, 2vw, 2rem);
+  line-height: 1.15;
+  margin: 10px 0 8px;
 }
 
 .messages-hero p {
   max-width: 58ch;
-  line-height: 1.8;
+  line-height: 1.5;
+  font-size: 0.9rem;
+  margin-bottom: 0;
   color: rgba(255, 255, 255, 0.86);
 }
 
-.conversation-card {
-  overflow: hidden;
-}
 
-.conversation-card__media {
-  height: 100%;
-  min-height: 240px;
-}
-
-.conversation-card__media img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.conversation-card__meta {
-  padding: 16px 18px 18px;
-  display: grid;
-  gap: 4px;
-}
-
-.conversation-card__meta span {
-  color: var(--muted);
-}
 
 .messages-layout {
   grid-template-columns: 320px minmax(0, 1fr);
@@ -479,10 +469,27 @@ export default {
 }
 
 .chat-panel__header {
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
   display: flex;
-  align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
+  align-items: flex-end;
+}
+
+.chat-panel__status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.listing-link {
+  font-size: 0.85rem;
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.listing-link:hover {
+  color: #a34e2c;
 }
 
 .chat-panel__header h2 {

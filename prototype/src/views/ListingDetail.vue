@@ -56,7 +56,7 @@
           <div v-if="!currentUser || currentUser.role !== 'admin'" class="contact-card">
             <span class="eyebrow">聯繫房東</span>
             <h3>{{ listing.landlord }}</h3>
-            <p>從這個細節頁可直接前往訊息頁，延續這筆房源的詢問流程。</p>
+            <p>有任何問題嗎？直接傳送訊息給房東，了解更多房屋細節。</p>
             <button class="primary-button" @click="contactLandlord">
               立即詢問
             </button>

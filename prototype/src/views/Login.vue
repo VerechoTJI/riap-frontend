@@ -3,33 +3,33 @@
     <section class="auth-hero">
       <div class="auth-hero__overlay"></div>
       <div class="auth-hero__copy">
-        <p class="eyebrow">前端原型 · 模擬登入</p>
-        <h1>把登入、找房、訊息與審核流程放在同一個乾淨視覺裡。</h1>
+        <p class="eyebrow">租屋好幫手</p>
+        <h1>找房、簽約、聯繫房東，一站式解決您的租屋大小事。</h1>
         <p>
-          這個切片使用本機 fixtures 與 Vue state 模擬完整租屋流程，方便快速展示和迭代。
+          加入我們的租屋平台，享受最便捷、安全的租屋體驗。
         </p>
       </div>
       <div class="auth-hero__stats">
         <div>
-          <strong>3</strong>
-          <span>角色</span>
+          <strong>10,000+</strong>
+          <span>精選優質房源</span>
         </div>
         <div>
-          <strong>localStorage</strong>
-          <span>保留登入狀態</span>
+          <strong>即時</strong>
+          <span>線上訊息溝通</span>
         </div>
         <div>
-          <strong>0</strong>
-          <span>後端依賴</span>
+          <strong>100%</strong>
+          <span>實名認證房東</span>
         </div>
       </div>
     </section>
 
     <section class="auth-card">
       <div class="auth-card__header">
-        <span class="badge">快速進入</span>
+        <span class="badge">歡迎回來</span>
         <h2>登入 / 註冊</h2>
-        <p>可輸入任意帳號，也可以直接點選示範帳號。</p>
+        <p>輸入您的帳號或電子郵件即可登入。</p>
       </div>
 
       <div class="field-grid">
