@@ -37,7 +37,7 @@
           />
         </div>
 
-        <div class="messages-layout">
+        <div class="messages-layout" :class="{ 'is-room-active': activeRoom }">
           <div class="messages-sidebar">
             <ChatRoomList
               :chatRooms="chatRooms"
@@ -50,28 +50,14 @@
             </div>
           </div>
 
-          <main class="chat-panel" v-if="activeRoom">
-            <div class="chat-panel__header">
-              <div>
-                <div class="chat-panel__status">
-                  <span class="eyebrow">{{ currentChatRoom.statusLabel }}</span>
-                </div>
-                <h2>{{ currentChatRoom.title }}</h2>
-              </div>
-              <div class="chat-panel__users">
-                <span>{{ currentChatRoom.from }}</span>
-                <span>→</span>
-                <span>{{ currentChatRoom.to }}</span>
-              </div>
-            </div>
-
-            <ChatStream
-              :messages="messages"
-              :currentUserId="user.id"
-            />
-
-            <ChatComposer @send="sendMessage" />
-          </main>
+          <ChatPanel 
+            v-if="activeRoom"
+            :currentChatRoom="currentChatRoom"
+            :messages="messages"
+            :currentUserId="user.id"
+            @send="sendMessage"
+            @back="selectRoom(null)"
+          />
 
           <main class="chat-panel chat-panel--empty" v-else>
             <div class="empty-selection">
@@ -118,8 +104,7 @@ import { getUsers } from "../lib/fixtures";
 import { ListingApiService } from "../lib/ListingApiService";
 import { listingImage, readCurrentUser, formatTwd } from "../lib/ui";
 import ChatRoomList from "../components/chat/ChatRoomList.vue";
-import ChatStream from "../components/chat/ChatStream.vue";
-import ChatComposer from "../components/chat/ChatComposer.vue";
+import ChatPanel from "../components/chat/ChatPanel.vue";
 import ConversationListingCard from "../components/chat/ConversationListingCard.vue";
 
 const API_BASE = "http://localhost:8080/api/chat";
@@ -128,8 +113,7 @@ const WS_BASE = "ws://localhost:8080/ws/chat/connect";
 export default {
   components: {
     ChatRoomList,
-    ChatStream,
-    ChatComposer,
+    ChatPanel,
     ConversationListingCard
   },
   data() {
@@ -158,19 +142,21 @@ export default {
     },
     currentListingTitle() {
       if (this.activeRoom?.title) return this.activeRoom.title;
-      return this.activeListing ? this.activeListing.title : "租屋對話";
+      return this.activeListing ? this.activeListing.title : "尚未選擇對話";
     },
     currentListingCity() {
       if (this.activeRoom?.city) return this.activeRoom.city;
       return this.activeListing ? this.activeListing.city : "尚未選擇房源";
     },
     listingHero() {
-      return this.activeRoom?.image || listingImage(this.activeListing || { id: 1 });
+      if (this.activeRoom?.image) return this.activeRoom.image;
+      return this.activeListing 
+        ? listingImage(this.activeListing) 
+        : "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=800&q=80";
     },
     activeListing() {
-      if (!this.listings.length) return null;
-      if (!this.activeRoom?.listingId) return this.listings[0];
-      return this.listings.find((l) => String(l.id) === String(this.activeRoom.listingId)) || this.listings[0];
+      if (!this.activeRoom?.listingId) return null;
+      return this.listings.find((l) => String(l.id) === String(this.activeRoom.listingId)) || null;
     },
   },
   async created() {
@@ -297,7 +283,7 @@ export default {
         });
         
         // Update local preview immediately
-        const room = this.chatRooms.find(r => r.id === this.activeChatRoomId);
+        const room = this.chatRooms.find(r => String(r.id) === String(this.activeChatRoomId));
         if (room) room.preview = `我: ${text}`;
 
       } catch (e) {
@@ -348,11 +334,11 @@ export default {
         }
         
         // New message received
-        if (data.chatRoomId === this.activeChatRoomId) {
+        if (String(data.chatRoomId) === String(this.activeChatRoomId)) {
           this.fetchHistory(this.activeChatRoomId);
         } else {
           // Notification for other room
-          const room = this.chatRooms.find(r => r.id === data.chatRoomId);
+          const room = this.chatRooms.find(r => String(r.id) === String(data.chatRoomId));
           if (room) {
             room.preview = "新訊息: " + data.content;
             room.hasUnread = true;
@@ -462,49 +448,6 @@ export default {
   grid-template-columns: 320px minmax(0, 1fr);
 }
 
-.chat-panel {
-  padding: 18px;
-  display: grid;
-  gap: 16px;
-}
-
-.chat-panel__header {
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-}
-
-.chat-panel__status {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.listing-link {
-  font-size: 0.85rem;
-  color: var(--primary);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-.listing-link:hover {
-  color: #a34e2c;
-}
-
-.chat-panel__header h2 {
-  margin: 12px 0 0;
-}
-
-.chat-panel__users {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-radius: 999px;
-  background: rgba(23, 50, 77, 0.06);
-  color: var(--secondary);
-}
 
 .chat-panel--empty {
   display: grid;
@@ -528,6 +471,14 @@ export default {
   .messages-hero,
   .messages-layout {
     grid-template-columns: 1fr;
+  }
+
+  .messages-layout:not(.is-room-active) > .chat-panel {
+    display: none;
+  }
+
+  .messages-layout.is-room-active > .messages-sidebar {
+    display: none;
   }
 }
 </style>

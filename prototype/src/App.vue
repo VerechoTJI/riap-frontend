@@ -92,7 +92,8 @@ export default {
       if (!this.user) return;
       
       fetch(`http://localhost:8080/api/chat/hasUnread`, {
-        headers: { 'Authorization': `Bearer ${this.user.token}` }
+        headers: { 'Authorization': `Bearer ${this.user.token}` },
+        cache: "no-store"
       })
       .then(res => {
         if(res.ok) return res.json();
